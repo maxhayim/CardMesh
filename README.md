@@ -17,7 +17,7 @@
   </a>
 </p>
 
-**CardMesh** is a keyboard-first pocket client for **MeshMonitor**, designed specifically for the **M5Stack CardputerZero**.
+**CardMesh** is a keyboard-first pocket client for **Meshtatsic**, **Meshcore** and **MeshMonitor**, designed specifically for the **M5Stack CardputerZero**.
 
 It provides a compact physical interface for accessing MeshMonitor channels, direct messages, nodes, sources, telemetry, and eventually field/deployment tools without requiring a direct connection between the CardputerZero and a Meshtastic radio.
 
