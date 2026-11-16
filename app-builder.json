@@ -1,14 +1,14 @@
 {
   "package": "cardmesh",
   "executable": "cardmesh",
-  "displayName": "CardMesh for MeshMonitor",
+  "displayName": "CardMesh",
   "tagline": "Your pocket console for the mesh.",
-  "description": "CardMesh is a keyboard-first pocket client for MeshMonitor, built for the M5Stack CardputerZero.",
+  "description": "CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore, built for the M5Stack CardputerZero — the first CardputerZero client targeting all three. This release (v0.1.0) ships the MeshMonitor-based Dashboard; direct Meshtastic/MeshCore support via the onboard LoRa hat is planned.",
   "version": "0.1.0",
   "architecture": "arm64",
   "targetDisplay": {
     "width": 320,
     "height": 170
   },
-  "repository": "https://github.com/maxhayim/cardmeshformeshmonitor"
+  "repository": "https://github.com/maxhayim/CardMesh"
 }
