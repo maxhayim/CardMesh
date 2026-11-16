@@ -47,6 +47,9 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_M:
                 result = GlobalKey::ToggleMap;
                 break;
+            case KEY_C:
+                result = GlobalKey::ToggleMessages;
+                break;
             case KEY_ESC:
             case KEY_B:
                 // KEY_B as a fallback: CardputerZero's chiclet keyboard may

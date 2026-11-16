@@ -9,7 +9,8 @@ enum class GlobalKey {
     Refresh,
     Quit,
     ToggleMap,  // 'M' from the Dashboard: open the Map screen
-    Back,       // Esc/'B' from the Map screen: return to the Dashboard
+    ToggleMessages,  // 'C' from the Dashboard: open the direct-LoRa Messages ("Chat") screen
+    Back,       // Esc/'B' from the Map/Messages screen: return to the Dashboard
     PanUp,
     PanDown,
     PanLeft,

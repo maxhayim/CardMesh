@@ -82,7 +82,7 @@ void DashboardScreen::build() {
     lv_obj_align(updateLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
 
     statusLabel_ = lv_label_create(screen);
-    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [U]pdate [A]uto [Q]uit");
+    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [C]hat [U]pdate [A]uto [Q]uit");
     lv_obj_set_style_text_color(statusLabel_, lv_color_white(), 0);
     lv_obj_align(statusLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }

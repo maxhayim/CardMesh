@@ -110,6 +110,9 @@ void NetworkWorker::pollOnce() {
         for (const auto& channel : channels.value) {
             unreadCount += channel.unreadCount;
         }
+        if (onChannelsUpdated) {
+            onChannelsUpdated(channels.value);
+        }
     }
 
     {

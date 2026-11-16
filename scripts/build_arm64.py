@@ -79,6 +79,7 @@ def main():
         "src/ui/MeshtasticWorker.cpp",
         "src/ui/DashboardScreen.cpp",
         "src/ui/MapScreen.cpp",
+        "src/ui/LoraMessagesScreen.cpp",
         "src/ui/EmojiFont.cpp",
         "src/ui/EvdevKeyboard.cpp",
         "src/update/UpdateChecker.cpp",

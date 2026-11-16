@@ -1,10 +1,13 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <thread>
+#include <vector>
 
 #include "DashboardModel.h"
 #include "MapModel.h"
+#include "models/Channel.h"
 #include "storage/Settings.h"
 
 namespace cardmesh::ui {
@@ -20,6 +23,14 @@ public:
     void start();
     void stop();
     void requestRefreshNow();
+
+    // Called from the background thread after each successful channel
+    // fetch, with MeshMonitor's channel list (including each channel's
+    // base64 PSK, where exposed). Lets the owner feed real channel keys
+    // into MeshtasticWorker for direct-LoRa decoding, without NetworkWorker
+    // needing to know that type exists. Set before start(); not
+    // thread-safe to change afterward.
+    std::function<void(const std::vector<models::Channel>&)> onChannelsUpdated;
 
 private:
     void run();

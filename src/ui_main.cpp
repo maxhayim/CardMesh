@@ -20,11 +20,14 @@
 #include "ui/DashboardScreen.h"
 #include "ui/EvdevKeyboard.h"
 #include "ui/LoraMessagesModel.h"
+#include "ui/LoraMessagesScreen.h"
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
 #include "ui/MeshtasticWorker.h"
 #include "ui/NetworkWorker.h"
 #include "update/UpdateWorker.h"
+#include "mesh/ChannelKey.h"
+#include "mesh/MeshPacketCodec.h"
 
 namespace {
 
@@ -33,7 +36,7 @@ std::string envOr(const char* name, const std::string& fallback) {
     return (value != nullptr && value[0] != '\0') ? std::string(value) : fallback;
 }
 
-enum class ActiveScreen { Dashboard, Map };
+enum class ActiveScreen { Dashboard, Map, Messages };
 
 }  // namespace
 
@@ -81,17 +84,36 @@ int main() {
     cardmesh::ui::LoraMessagesModel loraMessages;
     cardmesh::ui::DashboardScreen dashboard(model);
     cardmesh::ui::MapScreen map(mapModel, tileFetcher);
-
-    cardmesh::ui::NetworkWorker worker(*settings, model, mapModel);
-    worker.start();
+    cardmesh::ui::LoraMessagesScreen messages(loraMessages);
 
     // Independent of NetworkWorker/MeshMonitor by design -- both mesh paths
     // (REST-relayed and direct over the onboard LoRa hat) run concurrently.
-    // Only decodes the public MediumFast/default-PSK channel for now; real
-    // channel PSKs from MeshMonitor's own channel list are not yet wired in
-    // (see MeshtasticWorker::setChannels).
     cardmesh::ui::MeshtasticWorker meshtasticWorker(mutableSettings, loraMessages, mapModel);
     meshtasticWorker.start();
+
+    cardmesh::ui::NetworkWorker worker(*settings, model, mapModel);
+    // Feeds MeshMonitor's own channel list (and each channel's base64 PSK,
+    // where exposed) into MeshtasticWorker so direct-LoRa decoding isn't
+    // limited to the public MediumFast/default-PSK channel. A channel with
+    // no usable key (resolveChannelKey returns empty) is skipped. The
+    // Primary channel's stored name is often empty -- MeshMonitor convention
+    // mirrors real Meshtastic firmware here -- so it's substituted with
+    // "MediumFast", this network's actual preset (see MeshtasticCrypto.h).
+    worker.onChannelsUpdated = [&meshtasticWorker](const std::vector<cardmesh::models::Channel>& channels) {
+        std::vector<cardmesh::mesh::KnownChannel> known;
+        for (const auto& channel : channels) {
+            auto key = cardmesh::mesh::resolveChannelKey(channel.psk);
+            if (key.empty()) {
+                continue;
+            }
+            cardmesh::mesh::KnownChannel entry;
+            entry.name = channel.name.empty() ? "MediumFast" : channel.name;
+            entry.key = std::move(key);
+            known.push_back(std::move(entry));
+        }
+        meshtasticWorker.setChannels(std::move(known));
+    };
+    worker.start();
 
     cardmesh::update::UpdateModel updateModel;
     cardmesh::update::UpdateWorker updateWorker(updateModel, cardmesh::kGitHubRepo);
@@ -115,8 +137,10 @@ int main() {
 
         if (active == ActiveScreen::Dashboard) {
             dashboard.refresh();
-        } else {
+        } else if (active == ActiveScreen::Map) {
             map.refresh();
+        } else {
+            messages.refresh();
         }
 
         switch (keyboard.poll()) {
@@ -132,8 +156,14 @@ int main() {
                     lv_screen_load(map.screenObj());
                 }
                 break;
+            case cardmesh::ui::GlobalKey::ToggleMessages:
+                if (active == ActiveScreen::Dashboard) {
+                    active = ActiveScreen::Messages;
+                    lv_screen_load(messages.screenObj());
+                }
+                break;
             case cardmesh::ui::GlobalKey::Back:
-                if (active == ActiveScreen::Map) {
+                if (active == ActiveScreen::Map || active == ActiveScreen::Messages) {
                     active = ActiveScreen::Dashboard;
                     lv_screen_load(dashboard.screenObj());
                 }
