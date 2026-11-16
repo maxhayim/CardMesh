@@ -86,13 +86,13 @@ def main():
     # dev.cardputer.cc's store validator requires a desktop-entry file at
     # this exact path (confirmed via its "Preliminary check report" --
     # not documented anywhere in the README, discovered by trial upload).
-    # Display name is the README's Full Name ("CardMesh for MeshMonitor");
+    # Display name is app-builder.json's displayName ("CardMesh");
     # Package/Exec stay as the short, space-free identifier ("cardmesh") per
     # the README's Debian metadata spec (Package/Executable: cardmesh).
     desktop_entry = """[Desktop Entry]
 Version=1.0
 Type=Application
-Name=CardMesh for MeshMonitor
+Name=CardMesh
 Comment=Your pocket console for the mesh.
 Exec=cardmesh
 Icon=/usr/share/cardmesh/cardmesh.png
@@ -119,10 +119,12 @@ Installed-Size: {installed_size_kb}
 Depends: libc6
 Section: utils
 Priority: optional
-Homepage: https://github.com/maxhayim/cardmeshformeshmonitor
-Description: Keyboard-first pocket client for MeshMonitor
- CardMesh is a keyboard-first pocket client for MeshMonitor, built for the
- M5Stack CardputerZero. This build ships only the MVP Dashboard screen.
+Homepage: https://github.com/maxhayim/CardMesh
+Description: Keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore
+ CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and
+ MeshCore, built for the M5Stack CardputerZero. This build ships only the
+ MVP Dashboard screen, talking to MeshMonitor; direct Meshtastic/MeshCore
+ support via the onboard LoRa hat is planned, not yet implemented.
  .
  NOT verified against real CardputerZero hardware or the official online
  emulator -- see docs/DEVICE_BUILD.md in the source repository for the
