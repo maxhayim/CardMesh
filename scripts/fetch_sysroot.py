@@ -53,6 +53,9 @@ PACKAGES = {
     "libhogweed6": "pool/main/n/nettle/libhogweed6_3.8.1-2_arm64.deb",
     "libnettle8": "pool/main/n/nettle/libnettle8_3.8.1-2_arm64.deb",
     "libzstd1": "pool/main/libz/libzstd/libzstd1_1.5.4+dfsg2-5_arm64.deb",
+    # Kernel UAPI headers (linux/gpio.h, linux/spi/spidev.h, linux/i2c-dev.h,
+    # linux/i2c.h) needed by the LoRa hat's direct GPIO/SPI/I2C HAL.
+    "linux-libc-dev": "pool/main/l/linux/linux-libc-dev_6.1.176-1_arm64.deb",
 }
 
 
