@@ -17,9 +17,13 @@
   </a>
 </p>
 
+<p align="center">
+  <strong>🥇 The first client built for the M5Stack CardputerZero targeting all three major mesh ecosystems — MeshMonitor, Meshtastic, and MeshCore.</strong>
+</p>
+
 **CardMesh** is a keyboard-first pocket client for **MeshMonitor**, **Meshtastic**, and **MeshCore**, built for the M5Stack CardputerZero.
 
-CardMesh started as a pocket client for MeshMonitor only. It's now expanding to talk directly to the CardputerZero's onboard LoRa hat as well, which means it's becoming the **first client built for the CardputerZero that targets all three — MeshMonitor, Meshtastic, and MeshCore.**
+CardMesh started as a pocket client for MeshMonitor only. It's now expanding to talk directly to the CardputerZero's onboard LoRa hat as well, making it the **first CardputerZero client to target all three — MeshMonitor, Meshtastic, and MeshCore.**
 
 It provides a compact physical interface for accessing MeshMonitor channels, direct messages, nodes, sources, telemetry, and eventually field/deployment tools, with or without a direct connection between the CardputerZero and a Meshtastic/MeshCore radio.
 
@@ -33,7 +37,7 @@ It provides a compact physical interface for accessing MeshMonitor channels, dir
 **Latest release:** [`v0.1.0`](https://github.com/maxhayim/CardMesh/releases/tag/v0.1.0)  
 **Repository:** `maxhayim/CardMesh` (public, renamed from `cardmeshformeshmonitor` — old links redirect)
 
-**What's changed:** CardMesh is expanding beyond MeshMonitor to also talk directly to the CardputerZero's onboard LoRa hat, adding native Meshtastic and MeshCore support alongside the existing MeshMonitor client. See [Roadmap](#roadmap) for what's shipped vs. planned — **direct Meshtastic/MeshCore support is planned but not yet implemented**; v0.1.0 remains MeshMonitor-only.
+**What's changed:** CardMesh is expanding beyond MeshMonitor to also talk directly to the CardputerZero's onboard LoRa hat, adding native Meshtastic and MeshCore support alongside the existing MeshMonitor client — claiming the first spot among CardputerZero apps targeting all three mesh ecosystems. See [Roadmap](#roadmap) for what's shipped vs. planned — **direct Meshtastic/MeshCore support is planned but not yet implemented**; v0.1.0 remains MeshMonitor-only.
 
 This repository is now public. The `v0.1.0` `.deb` build has **not** been verified against real CardputerZero hardware or the official online emulator — see [`docs/DEVICE_BUILD.md`](docs/DEVICE_BUILD.md) for exactly what is and isn't confirmed before relying on it.
 
