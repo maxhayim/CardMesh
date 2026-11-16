@@ -83,9 +83,16 @@ ApiResult<std::vector<models::Message>> MeshMonitorClient::getMessages(const std
 ApiResult<bool> MeshMonitorClient::sendMessage(const std::string& sourceId, models::ConversationType type,
                                                 const std::string& conversationId,
                                                 const std::string& text) {
+    // Verified directly against the real server: it rejects
+    // {"conversationType","conversationId"} with 400 "Either channel or
+    // toNodeId is required" -- the real body shape is {"channel": <int>}
+    // for a channel send, or {"toNodeId": <node id string>} for a DM.
     nlohmann::json body;
-    body["conversationType"] = (type == models::ConversationType::DirectMessage) ? "DM" : "CHANNEL";
-    body["conversationId"] = conversationId;
+    if (type == models::ConversationType::DirectMessage) {
+        body["toNodeId"] = conversationId;
+    } else {
+        body["channel"] = std::stoi(conversationId);
+    }
     body["text"] = text;
 
     const auto response = http_.post(sourcePath(sourceId, "/messages"), body.dump());

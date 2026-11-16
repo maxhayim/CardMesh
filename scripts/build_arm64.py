@@ -80,6 +80,7 @@ def main():
         "src/ui/DashboardScreen.cpp",
         "src/ui/MapScreen.cpp",
         "src/ui/LoraMessagesScreen.cpp",
+        "src/ui/MeshMonitorMessagesScreen.cpp",
         "src/ui/EmojiFont.cpp",
         "src/ui/EvdevKeyboard.cpp",
         "src/update/UpdateChecker.cpp",

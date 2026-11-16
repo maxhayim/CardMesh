@@ -23,6 +23,8 @@
 #include "ui/LoraMessagesScreen.h"
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
+#include "ui/MeshMonitorMessagesModel.h"
+#include "ui/MeshMonitorMessagesScreen.h"
 #include "ui/MeshtasticWorker.h"
 #include "ui/NetworkWorker.h"
 #include "update/UpdateWorker.h"
@@ -36,7 +38,7 @@ std::string envOr(const char* name, const std::string& fallback) {
     return (value != nullptr && value[0] != '\0') ? std::string(value) : fallback;
 }
 
-enum class ActiveScreen { Dashboard, Map, Messages };
+enum class ActiveScreen { Dashboard, Map, Messages, RelayMessages };
 
 }  // namespace
 
@@ -82,16 +84,18 @@ int main() {
     cardmesh::ui::DashboardModel model;
     cardmesh::ui::MapModel mapModel;
     cardmesh::ui::LoraMessagesModel loraMessages;
+    cardmesh::ui::MeshMonitorMessagesModel relayMessagesModel;
     cardmesh::ui::DashboardScreen dashboard(model);
     cardmesh::ui::MapScreen map(mapModel, tileFetcher);
     cardmesh::ui::LoraMessagesScreen messages(loraMessages);
+    cardmesh::ui::MeshMonitorMessagesScreen relayMessages(relayMessagesModel);
 
     // Independent of NetworkWorker/MeshMonitor by design -- both mesh paths
     // (REST-relayed and direct over the onboard LoRa hat) run concurrently.
     cardmesh::ui::MeshtasticWorker meshtasticWorker(mutableSettings, loraMessages, mapModel);
     meshtasticWorker.start();
 
-    cardmesh::ui::NetworkWorker worker(*settings, model, mapModel);
+    cardmesh::ui::NetworkWorker worker(*settings, model, mapModel, relayMessagesModel);
     // Feeds MeshMonitor's own channel list (and each channel's base64 PSK,
     // where exposed) into MeshtasticWorker so direct-LoRa decoding isn't
     // limited to the public MediumFast/default-PSK channel. A channel with
@@ -128,12 +132,15 @@ int main() {
     // Composing is handled separately from the GlobalKey shortcut switch
     // below: while composing, every printable key is message text, not a
     // shortcut (typing 'm' must not open the Map). See EvdevKeyboard::poll
-    // vs. pollText.
+    // vs. pollText. Shared across both message screens -- `active` says
+    // which one, since only one can be composing at a time.
     //
-    // MVP scope: always sends on the public "MediumFast" channel -- there's
-    // no channel picker yet, so a real per-channel PSK learned via
-    // onChannelsUpdated above is only used for *decoding* incoming traffic,
-    // not for choosing where outgoing messages go.
+    // Direct-LoRa MVP scope: always sends on the public "MediumFast"
+    // channel -- there's no channel picker yet, so a real per-channel PSK
+    // learned via onChannelsUpdated above is only used for *decoding*
+    // incoming traffic, not for choosing where outgoing messages go.
+    // (MeshMonitor-relayed sends use NetworkWorker's own primary-channel
+    // detection instead -- see NetworkWorker::pollOnce.)
     bool composing = false;
     std::string composeBuffer;
 
@@ -151,8 +158,10 @@ int main() {
             dashboard.refresh();
         } else if (active == ActiveScreen::Map) {
             map.refresh();
-        } else {
+        } else if (active == ActiveScreen::Messages) {
             messages.refresh();
+        } else {
+            relayMessages.refresh();
         }
 
         if (composing) {
@@ -163,20 +172,27 @@ int main() {
                 if (textEvent.cancelPressed) {
                     composing = false;
                     composeBuffer.clear();
-                    messages.setComposing(false);
+                    if (active == ActiveScreen::Messages) messages.setComposing(false);
+                    else relayMessages.setComposing(false);
                 } else if (textEvent.enterPressed) {
                     if (!composeBuffer.empty()) {
-                        meshtasticWorker.sendText("MediumFast", composeBuffer);
+                        if (active == ActiveScreen::Messages) {
+                            meshtasticWorker.sendText("MediumFast", composeBuffer);
+                        } else {
+                            worker.queueSendMessage(composeBuffer);
+                        }
                     }
                     composing = false;
                     composeBuffer.clear();
-                    messages.setComposing(false);
+                    if (active == ActiveScreen::Messages) messages.setComposing(false);
+                    else relayMessages.setComposing(false);
                 } else {
                     if (textEvent.backspace && !composeBuffer.empty()) {
                         composeBuffer.pop_back();
                     }
                     composeBuffer += textEvent.chars;
-                    messages.setComposeText(composeBuffer);
+                    if (active == ActiveScreen::Messages) messages.setComposeText(composeBuffer);
+                    else relayMessages.setComposeText(composeBuffer);
                 }
             }
         } else {
@@ -199,16 +215,28 @@ int main() {
                     lv_screen_load(messages.screenObj());
                 }
                 break;
+            case cardmesh::ui::GlobalKey::ToggleRelayMessages:
+                if (active == ActiveScreen::Dashboard) {
+                    active = ActiveScreen::RelayMessages;
+                    lv_screen_load(relayMessages.screenObj());
+                }
+                break;
             case cardmesh::ui::GlobalKey::StartCompose:
-                if (active == ActiveScreen::Messages) {
+                if (active == ActiveScreen::Messages || active == ActiveScreen::RelayMessages) {
                     composing = true;
                     composeBuffer.clear();
-                    messages.setComposing(true);
-                    messages.setComposeText("");
+                    if (active == ActiveScreen::Messages) {
+                        messages.setComposing(true);
+                        messages.setComposeText("");
+                    } else {
+                        relayMessages.setComposing(true);
+                        relayMessages.setComposeText("");
+                    }
                 }
                 break;
             case cardmesh::ui::GlobalKey::Back:
-                if (active == ActiveScreen::Map || active == ActiveScreen::Messages) {
+                if (active == ActiveScreen::Map || active == ActiveScreen::Messages ||
+                    active == ActiveScreen::RelayMessages) {
                     active = ActiveScreen::Dashboard;
                     lv_screen_load(dashboard.screenObj());
                 }

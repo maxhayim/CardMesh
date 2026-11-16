@@ -109,6 +109,9 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_C:
                 result = GlobalKey::ToggleMessages;
                 break;
+            case KEY_T:
+                result = GlobalKey::ToggleRelayMessages;
+                break;
             case KEY_ENTER:
             case KEY_KPENTER:
                 result = GlobalKey::StartCompose;

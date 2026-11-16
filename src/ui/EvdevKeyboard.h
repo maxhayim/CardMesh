@@ -10,7 +10,8 @@ enum class GlobalKey {
     Quit,
     ToggleMap,  // 'M' from the Dashboard: open the Map screen
     ToggleMessages,  // 'C' from the Dashboard: open the direct-LoRa Messages ("Chat") screen
-    StartCompose,  // Enter from the Messages screen (not yet composing): start typing a message
+    ToggleRelayMessages,  // 'T' from the Dashboard: open the MeshMonitor-relayed messages ("Text") screen
+    StartCompose,  // Enter from a Messages screen (not yet composing): start typing a message
     Back,       // Esc/'B' from the Map/Messages screen: return to the Dashboard
     PanUp,
     PanDown,
