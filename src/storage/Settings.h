@@ -18,6 +18,12 @@ struct AppSettings {
     // deployment can point at a self-hosted or commercial tile server
     // instead. {z}/{x}/{y} are substituted. See src/map/TileCache.h.
     std::string tileServerTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+    // Whether CardMesh checks GitHub Releases for a newer version at
+    // startup. Checking is always available on demand (the 'U' shortcut)
+    // regardless of this setting -- it only controls the automatic
+    // startup check. See src/update/UpdateChecker.h.
+    bool autoUpdateCheck = true;
 };
 
 // Persists connection configuration at ~/.config/cardmesh/config.json (mode 0600).

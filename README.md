@@ -1003,6 +1003,8 @@ is built.
 Dashboard:
   R    Refresh
   M    Open Map
+  U    Check for update, or install one already found
+  A    Toggle automatic update checks on/off
   Q    Quit
 
 Map:
@@ -1011,6 +1013,19 @@ Map:
   B/Esc   Back to Dashboard
   Q       Quit
 ```
+
+### Software updates
+
+CardMesh checks GitHub Releases for a newer `*_arm64.deb` build on startup
+(toggle with `A`; checking on demand with `U` always works regardless of
+the toggle). Pressing `U` again once an update is found downloads it and
+runs `dpkg -i`.
+
+**Not yet verified on real hardware:** installing assumes the running
+process can run `dpkg -i` (e.g. runs as root, as is common on single-user
+embedded Linux devices). If that assumption is wrong, `U` will report the
+downloaded `.deb`'s path instead so it can be installed manually with
+`sudo dpkg -i <path>` — see `src/update/UpdateInstaller.h`.
 
 ## Full plan (not all implemented yet)
 

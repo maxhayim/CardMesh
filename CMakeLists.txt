@@ -15,6 +15,9 @@ add_library(cardmesh_core STATIC
     src/api/MeshMonitorClient.cpp
     src/storage/Settings.cpp
     src/storage/Database.cpp
+    src/update/UpdateChecker.cpp
+    src/update/UpdateInstaller.cpp
+    src/update/UpdateWorker.cpp
 )
 
 target_include_directories(cardmesh_core PUBLIC ${CMAKE_SOURCE_DIR}/src)

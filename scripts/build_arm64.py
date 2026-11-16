@@ -74,6 +74,9 @@ def main():
         "src/ui/MapScreen.cpp",
         "src/ui/EmojiFont.cpp",
         "src/ui/EvdevKeyboard.cpp",
+        "src/update/UpdateChecker.cpp",
+        "src/update/UpdateInstaller.cpp",
+        "src/update/UpdateWorker.cpp",
         "src/ui_main.cpp",
     ]
     cpp_sources = [os.path.join(REPO_ROOT, p) for p in cpp_sources]

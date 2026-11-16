@@ -263,6 +263,13 @@ validator, not a functional test on real hardware or the emulator.
   fetches use the same `HttpClient`/libcurl path as MeshMonitor API calls
   and were verified from this dev machine's network, not from whatever
   connectivity a real CardputerZero has in the field.
+- **Self-update install permission (`U` key) is unconfirmed**: `UpdateInstaller`
+  shells out to `dpkg -i` directly, which needs the running process to have
+  install permission (e.g. runs as root). If that's wrong on the real
+  device, the install step fails gracefully and reports the downloaded
+  `.deb`'s path for a manual `sudo dpkg -i` instead of crashing — but
+  which branch actually runs on real hardware is untested. See
+  `src/update/UpdateInstaller.h`.
 
 ## If it doesn't run
 

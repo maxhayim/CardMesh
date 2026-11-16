@@ -8,10 +8,12 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 #include "lvgl.h"
 
+#include "Version.h"
 #include "map/TileFetcher.h"
 #include "storage/Settings.h"
 #include "ui/DashboardModel.h"
@@ -20,6 +22,7 @@
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
 #include "ui/NetworkWorker.h"
+#include "update/UpdateWorker.h"
 
 namespace {
 
@@ -61,7 +64,8 @@ int main() {
 
     cardmesh::map::TileFetcher tileFetcher(cardmesh::map::TileCache(
         (stateDir / "tiles").string(), settings->tileServerTemplate,
-        "CardMesh/0.1.0 (+https://github.com/maxhayim/cardmeshformeshmonitor)"));
+        "CardMesh/" + std::string(cardmesh::kVersion) + " (+https://github.com/" +
+            std::string(cardmesh::kGitHubRepo) + ")"));
     tileFetcher.start();
 
     cardmesh::ui::DashboardModel model;
@@ -72,12 +76,26 @@ int main() {
     cardmesh::ui::NetworkWorker worker(*settings, model, mapModel);
     worker.start();
 
+    cardmesh::update::UpdateModel updateModel;
+    cardmesh::update::UpdateWorker updateWorker(updateModel, cardmesh::kGitHubRepo);
+    updateWorker.start();
+    cardmesh::storage::AppSettings mutableSettings = *settings;
+    if (mutableSettings.autoUpdateCheck) {
+        updateWorker.checkNow();
+    }
+
     ActiveScreen active = ActiveScreen::Dashboard;
     lv_screen_load(dashboard.screenObj());
 
     bool running = true;
     while (running) {
         const std::uint32_t sleepMs = lv_timer_handler();
+
+        {
+            std::lock_guard<std::mutex> lock(updateModel.mutex);
+            std::lock_guard<std::mutex> modelLock(model.mutex);
+            model.updateStatusLine = updateModel.statusMessage;
+        }
 
         if (active == ActiveScreen::Dashboard) {
             dashboard.refresh();
@@ -122,6 +140,28 @@ int main() {
             case cardmesh::ui::GlobalKey::ZoomOut:
                 if (active == ActiveScreen::Map) map.zoomOut();
                 break;
+            case cardmesh::ui::GlobalKey::CheckForUpdate: {
+                bool available = false;
+                {
+                    std::lock_guard<std::mutex> lock(updateModel.mutex);
+                    available = updateModel.checked && updateModel.updateAvailable;
+                }
+                if (available) {
+                    updateWorker.installNow();
+                } else {
+                    updateWorker.checkNow();
+                }
+                break;
+            }
+            case cardmesh::ui::GlobalKey::ToggleAutoUpdate:
+                mutableSettings.autoUpdateCheck = !mutableSettings.autoUpdateCheck;
+                cardmesh::storage::Settings::save(mutableSettings);
+                {
+                    std::lock_guard<std::mutex> lock(updateModel.mutex);
+                    updateModel.statusMessage =
+                        mutableSettings.autoUpdateCheck ? "Auto-update: ON" : "Auto-update: OFF";
+                }
+                break;
             case cardmesh::ui::GlobalKey::None:
                 break;
         }
@@ -131,5 +171,6 @@ int main() {
 
     tileFetcher.stop();
     worker.stop();
+    updateWorker.stop();
     return EXIT_SUCCESS;
 }

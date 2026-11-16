@@ -43,6 +43,7 @@ private:
     lv_obj_t* activeValue_ = nullptr;
     lv_obj_t* channelsValue_ = nullptr;
     lv_obj_t* unreadValue_ = nullptr;
+    lv_obj_t* updateLabel_ = nullptr;
 
     bool lastConnected_ = false;
     int lastNodeCount_ = -1;
@@ -51,6 +52,7 @@ private:
     int lastUnreadCount_ = -1;
     std::string lastSourceName_;
     std::string lastStatusMessage_;
+    std::string lastUpdateStatusLine_;
 };
 
 }  // namespace cardmesh::ui

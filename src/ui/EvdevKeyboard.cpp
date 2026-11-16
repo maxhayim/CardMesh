@@ -74,6 +74,12 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_KPMINUS:
                 result = GlobalKey::ZoomOut;
                 break;
+            case KEY_U:
+                result = GlobalKey::CheckForUpdate;
+                break;
+            case KEY_A:
+                result = GlobalKey::ToggleAutoUpdate;
+                break;
             default:
                 break;
         }

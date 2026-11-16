@@ -13,3 +13,7 @@ add_test(NAME settings COMMAND test_settings)
 add_executable(test_database test_database.cpp)
 target_link_libraries(test_database PRIVATE cardmesh_core)
 add_test(NAME database COMMAND test_database)
+
+add_executable(test_update_checker test_update_checker.cpp)
+target_link_libraries(test_update_checker PRIVATE cardmesh_core)
+add_test(NAME update_checker COMMAND test_update_checker)

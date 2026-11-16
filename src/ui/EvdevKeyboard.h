@@ -16,6 +16,8 @@ enum class GlobalKey {
     PanRight,
     ZoomIn,
     ZoomOut,
+    CheckForUpdate,   // 'U' from the Dashboard: check now, or install if one was already found
+    ToggleAutoUpdate,  // 'A' from the Dashboard: toggle automatic startup update checks
 };
 
 // Minimal, non-blocking reader for global keyboard shortcuts on a Linux

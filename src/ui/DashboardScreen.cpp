@@ -76,8 +76,13 @@ void DashboardScreen::build() {
         *row.valueOut = valueLabel;
     }
 
+    updateLabel_ = lv_label_create(screen);
+    lv_label_set_text(updateLabel_, "");
+    lv_obj_set_style_text_color(updateLabel_, lv_color_make(0xff, 0xcc, 0x00), 0);
+    lv_obj_align(updateLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
+
     statusLabel_ = lv_label_create(screen);
-    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [Q]uit");
+    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [U]pdate [A]uto [Q]uit");
     lv_obj_set_style_text_color(statusLabel_, lv_color_white(), 0);
     lv_obj_align(statusLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }
@@ -90,6 +95,7 @@ void DashboardScreen::refresh() {
     int activeCount;
     int channelCount;
     int unreadCount;
+    std::string updateStatusLine;
 
     {
         std::lock_guard<std::mutex> lock(model_.mutex);
@@ -100,6 +106,7 @@ void DashboardScreen::refresh() {
         activeCount = model_.activeCount;
         channelCount = model_.channelCount;
         unreadCount = model_.unreadCount;
+        updateStatusLine = model_.updateStatusLine;
     }
 
     if (connected != lastConnected_) {
@@ -128,6 +135,10 @@ void DashboardScreen::refresh() {
     if (unreadCount != lastUnreadCount_) {
         setValueText(unreadValue_, unreadCount);
         lastUnreadCount_ = unreadCount;
+    }
+    if (updateStatusLine != lastUpdateStatusLine_) {
+        lv_label_set_text(updateLabel_, updateStatusLine.c_str());
+        lastUpdateStatusLine_ = updateStatusLine;
     }
 }
 
