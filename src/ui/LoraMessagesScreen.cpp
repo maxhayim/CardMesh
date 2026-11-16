@@ -47,10 +47,34 @@ void LoraMessagesScreen::build() {
     lv_obj_set_style_text_color(statusLabel_, lv_color_make(0xff, 0xcc, 0x00), 0);
     lv_obj_align(statusLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
 
-    lv_obj_t* help = lv_label_create(screen);
-    lv_label_set_text(help, "[B]ack  (sending not implemented yet)");
-    lv_obj_set_style_text_color(help, lv_color_white(), 0);
-    lv_obj_align(help, LV_ALIGN_BOTTOM_LEFT, 2, -2);
+    composeLabel_ = lv_label_create(screen);
+    lv_label_set_text(composeLabel_, "");
+    lv_obj_set_style_text_color(composeLabel_, lv_color_white(), 0);
+    lv_obj_align(composeLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
+    lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
+
+    helpLabel_ = lv_label_create(screen);
+    lv_label_set_text(helpLabel_, "[Enter] compose  [B]ack");
+    lv_obj_set_style_text_color(helpLabel_, lv_color_white(), 0);
+    lv_obj_align(helpLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
+}
+
+void LoraMessagesScreen::setComposing(bool composing) {
+    composing_ = composing;
+    if (composing) {
+        lv_obj_add_flag(statusLabel_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(helpLabel_, "[Enter] send  [Esc] cancel");
+    } else {
+        lv_obj_clear_flag(statusLabel_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(helpLabel_, "[Enter] compose  [B]ack");
+    }
+}
+
+void LoraMessagesScreen::setComposeText(const std::string& text) {
+    const std::string display = "> " + text;
+    lv_label_set_text(composeLabel_, display.c_str());
 }
 
 void LoraMessagesScreen::refresh() {

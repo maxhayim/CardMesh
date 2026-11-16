@@ -125,6 +125,18 @@ int main() {
     ActiveScreen active = ActiveScreen::Dashboard;
     lv_screen_load(dashboard.screenObj());
 
+    // Composing is handled separately from the GlobalKey shortcut switch
+    // below: while composing, every printable key is message text, not a
+    // shortcut (typing 'm' must not open the Map). See EvdevKeyboard::poll
+    // vs. pollText.
+    //
+    // MVP scope: always sends on the public "MediumFast" channel -- there's
+    // no channel picker yet, so a real per-channel PSK learned via
+    // onChannelsUpdated above is only used for *decoding* incoming traffic,
+    // not for choosing where outgoing messages go.
+    bool composing = false;
+    std::string composeBuffer;
+
     bool running = true;
     while (running) {
         const std::uint32_t sleepMs = lv_timer_handler();
@@ -143,6 +155,31 @@ int main() {
             messages.refresh();
         }
 
+        if (composing) {
+            // Deliberately not a `continue` -- it would skip the sleep_for
+            // at the bottom of this loop and busy-spin the CPU while typing.
+            const cardmesh::ui::TextInputEvent textEvent = keyboard.pollText();
+            if (!textEvent.isEmpty()) {
+                if (textEvent.cancelPressed) {
+                    composing = false;
+                    composeBuffer.clear();
+                    messages.setComposing(false);
+                } else if (textEvent.enterPressed) {
+                    if (!composeBuffer.empty()) {
+                        meshtasticWorker.sendText("MediumFast", composeBuffer);
+                    }
+                    composing = false;
+                    composeBuffer.clear();
+                    messages.setComposing(false);
+                } else {
+                    if (textEvent.backspace && !composeBuffer.empty()) {
+                        composeBuffer.pop_back();
+                    }
+                    composeBuffer += textEvent.chars;
+                    messages.setComposeText(composeBuffer);
+                }
+            }
+        } else {
         switch (keyboard.poll()) {
             case cardmesh::ui::GlobalKey::Refresh:
                 worker.requestRefreshNow();
@@ -160,6 +197,14 @@ int main() {
                 if (active == ActiveScreen::Dashboard) {
                     active = ActiveScreen::Messages;
                     lv_screen_load(messages.screenObj());
+                }
+                break;
+            case cardmesh::ui::GlobalKey::StartCompose:
+                if (active == ActiveScreen::Messages) {
+                    composing = true;
+                    composeBuffer.clear();
+                    messages.setComposing(true);
+                    messages.setComposeText("");
                 }
                 break;
             case cardmesh::ui::GlobalKey::Back:
@@ -210,6 +255,7 @@ int main() {
                 break;
             case cardmesh::ui::GlobalKey::None:
                 break;
+        }
         }
         // lv_timer_handler() can return LV_NO_TIMER_READY (UINT32_MAX) when no
         // LVGL timer has pending work; treating that as a literal sleep
