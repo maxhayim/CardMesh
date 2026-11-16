@@ -1,6 +1,6 @@
 # Security Policy – CardMesh
 
-CardMesh is a pocket client for MeshMonitor, running on the M5Stack CardputerZero. It authenticates to a user-configured MeshMonitor server over HTTPS using an API token, and may display private mesh channel messages, direct messages, and node telemetry. Because it handles credentials and potentially sensitive field/deployment data, security must be taken seriously.
+CardMesh is a pocket client for MeshMonitor, Meshtastic, and MeshCore, running on the M5Stack CardputerZero. Today (v0.1.0) it authenticates to a user-configured MeshMonitor server over HTTPS using an API token, and may display private mesh channel messages, direct messages, and node telemetry. Planned (not yet implemented) direct Meshtastic/MeshCore support over the CardputerZero's onboard LoRa hat will add a second, local data path — see the note under "Network & Transport Security" below. Because it handles credentials and potentially sensitive field/deployment data, security must be taken seriously.
 
 ---
 
@@ -42,6 +42,7 @@ CardMesh communicates with a single, user-configured MeshMonitor server.
 - HTTPS with TLS certificate verification is enabled by default (`HttpClient::setVerifyTls`) and must not be disabled except for explicit, user-opted-in development/testing against a local server.
 - CardMesh does not run its own network-facing server or listener; it is an outbound-only REST client.
 - CardMesh does not implement analytics, advertising, or any third-party telemetry. All traffic goes directly to the configured MeshMonitor instance.
+- **Planned direct LoRa path (not yet implemented):** direct Meshtastic/MeshCore communication over the CardputerZero's onboard LoRa hat is local radio traffic, not a MeshMonitor REST call, and will need its own threat model (e.g. LoRa traffic is broadcast and not encrypted by default at the radio layer unless the mesh's own channel encryption is configured) before it ships. No credentials are expected for this path. This section will be updated with specifics once that work starts.
 
 ---
 

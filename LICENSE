@@ -27,9 +27,10 @@ IN THE SOFTWARE.
 CardMesh is an independent, open-source project that interacts with or builds upon the following third-party software and platforms:
 
 - MeshMonitor is a separate open-source project that CardMesh connects to as a REST API client.
-- Meshtastic, MeshCore, and MQTT are technologies used by MeshMonitor and referenced here for architectural context.
+- Meshtastic and MeshCore are mesh networking projects. CardMesh currently reaches them indirectly via MeshMonitor, and has planned (not yet implemented) support for communicating with them directly through the CardputerZero's onboard LoRa hat.
+- MQTT is a technology used by MeshMonitor and referenced here for architectural context.
 - LVGL is an open-source graphics library used for the CardputerZero UI.
 - CardputerZero and the CardputerZero AppBuilder are products of M5Stack.
 - nlohmann/json, libcurl, and SQLite are used under their respective open-source licenses.
 
-All trademarks, logos, and brand names are the property of their respective owners. This project is not affiliated with, endorsed by, or officially connected to the MeshMonitor project, the Meshtastic project, or M5Stack.
+All trademarks, logos, and brand names are the property of their respective owners. This project is not affiliated with, endorsed by, or officially connected to the MeshMonitor project, the Meshtastic project, the MeshCore project, or M5Stack.
