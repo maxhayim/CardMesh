@@ -51,7 +51,11 @@ int main() {
     lv_display_t* display = lv_linux_fbdev_create();
     lv_linux_fbdev_set_file(display, envOr("CARDMESH_FB_DEVICE", "/dev/fb0").c_str());
 
-    cardmesh::ui::EvdevKeyboard keyboard(envOr("CARDMESH_INPUT_DEVICE", "/dev/input/event0"));
+    // /dev/input/cardputer-zero-internal is a stable udev symlink to the
+    // device's built-in keyboard (confirmed on real hardware to be
+    // /dev/input/event3, which is not a stable index to hardcode directly).
+    cardmesh::ui::EvdevKeyboard keyboard(
+        envOr("CARDMESH_INPUT_DEVICE", "/dev/input/cardputer-zero-internal"));
     if (!keyboard.isOpen()) {
         std::cerr << "Warning: could not open input device; global shortcuts will not work.\n";
     }
@@ -165,8 +169,14 @@ int main() {
             case cardmesh::ui::GlobalKey::None:
                 break;
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs > 0 ? sleepMs : 10));
+        // lv_timer_handler() can return LV_NO_TIMER_READY (UINT32_MAX) when no
+        // LVGL timer has pending work; treating that as a literal sleep
+        // duration would block the loop (and keyboard/network polling) for
+        // ~49 days. Cap the delay so this loop keeps running regardless.
+        constexpr std::uint32_t kMaxSleepMs = 50;
+        const std::uint32_t clampedSleepMs =
+            (sleepMs > 0 && sleepMs <= kMaxSleepMs) ? sleepMs : kMaxSleepMs;
+        std::this_thread::sleep_for(std::chrono::milliseconds(clampedSleepMs));
     }
 
     tileFetcher.stop();

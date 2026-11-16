@@ -51,6 +51,11 @@ HttpResponse HttpClient::perform(const std::string& method, const std::string& p
     const std::string url = baseUrl_ + path;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeoutSeconds_);
+    // Required for correct timeout behavior when libcurl is used from more
+    // than one thread (NetworkWorker and UpdateWorker both do): without
+    // this, libcurl's default timeout path can use SIGALRM/alarm(), which is
+    // unsafe across threads and can make CURLOPT_TIMEOUT silently not fire.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, verifyTls_ ? 1L : 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, verifyTls_ ? 2L : 0L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
@@ -107,6 +112,7 @@ HttpResponse fetchUrl(const std::string& url, const std::vector<std::string>& ex
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeoutSeconds);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);

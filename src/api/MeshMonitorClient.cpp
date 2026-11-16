@@ -31,7 +31,10 @@ ApiResult<std::vector<T>> parseArrayResponse(const HttpResponse& response) {
     std::vector<T> items;
     try {
         const auto json = nlohmann::json::parse(response.body);
-        for (const auto& item : json) {
+        // MeshMonitor wraps list responses as {"success":true,"count":N,"data":[...]}
+        // rather than returning a bare array; unwrap "data" when present.
+        const auto& array = (json.is_object() && json.contains("data")) ? json.at("data") : json;
+        for (const auto& item : array) {
             items.push_back(T::fromJson(item));
         }
     } catch (const nlohmann::json::exception& e) {
@@ -108,7 +111,8 @@ ApiResult<models::Traceroute> MeshMonitorClient::requestTraceroute(const std::st
     }
     try {
         const auto json = nlohmann::json::parse(response.body);
-        return ApiResult<models::Traceroute>::success(models::Traceroute::fromJson(json));
+        const auto& object = (json.is_object() && json.contains("data")) ? json.at("data") : json;
+        return ApiResult<models::Traceroute>::success(models::Traceroute::fromJson(object));
     } catch (const nlohmann::json::exception& e) {
         return ApiResult<models::Traceroute>::failure(e.what());
     }

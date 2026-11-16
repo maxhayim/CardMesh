@@ -15,7 +15,13 @@ struct Channel {
 
     static Channel fromJson(const nlohmann::json& j) {
         Channel channel;
-        channel.id = requiredField<std::string>(j, "id", "");
+        // MeshMonitor's channel "id" is a small integer (channel index 0-7),
+        // unlike Source/Node ids which are strings -- accept either so a
+        // numeric id doesn't throw a json type_error.
+        auto idIt = j.find("id");
+        if (idIt != j.end() && !idIt->is_null()) {
+            channel.id = idIt->is_string() ? idIt->get<std::string>() : idIt->dump();
+        }
         channel.name = requiredField<std::string>(j, "name", channel.id);
         channel.unreadCount = requiredField<int>(j, "unreadCount", 0);
         return channel;
