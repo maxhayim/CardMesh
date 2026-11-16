@@ -12,6 +12,11 @@ struct Channel {
     std::string id;
     std::string name;
     int unreadCount = 0;
+    // Base64-encoded PSK, as MeshMonitor's API returns it. Empty if the
+    // server doesn't expose it. See cardmesh::mesh::resolveChannelKey for
+    // turning this into raw AES key bytes for direct-LoRa en/decryption --
+    // never logged or committed, per CardMesh's channel-key handling rule.
+    std::string psk;
 
     static Channel fromJson(const nlohmann::json& j) {
         Channel channel;
@@ -24,6 +29,7 @@ struct Channel {
         }
         channel.name = requiredField<std::string>(j, "name", channel.id);
         channel.unreadCount = requiredField<int>(j, "unreadCount", 0);
+        channel.psk = requiredField<std::string>(j, "psk", "");
         return channel;
     }
 };

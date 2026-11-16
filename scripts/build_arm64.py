@@ -37,10 +37,16 @@ def compile_unit(src, sysroot, is_cpp):
         "-o", obj,
         "-O2",
         "-Wno-deprecated-declarations",
+        # RadioLib's BuildOpt.h embeds __DATE__/__TIME__ in a version string
+        # (RADIOLIB_INFO), which zig cc treats as an error by default since
+        # it breaks reproducible builds -- harmless here, just a build
+        # timestamp string never read at runtime.
+        "-Wno-date-time",
         "-I", os.path.join(REPO_ROOT, "src"),
         "-I", os.path.join(REPO_ROOT, "src", "ui"),
         "-I", os.path.join(REPO_ROOT, "third_party"),
         "-I", os.path.join(REPO_ROOT, "third_party", "lvgl"),
+        "-I", os.path.join(REPO_ROOT, "third_party", "RadioLib", "src"),
         "-isystem", os.path.join(sysroot, "usr", "include"),
         "-isystem", os.path.join(sysroot, "usr", "include", "aarch64-linux-gnu"),
     ]
@@ -70,6 +76,7 @@ def main():
         "src/map/TileCache.cpp",
         "src/map/TileFetcher.cpp",
         "src/ui/NetworkWorker.cpp",
+        "src/ui/MeshtasticWorker.cpp",
         "src/ui/DashboardScreen.cpp",
         "src/ui/MapScreen.cpp",
         "src/ui/EmojiFont.cpp",
@@ -77,6 +84,18 @@ def main():
         "src/update/UpdateChecker.cpp",
         "src/update/UpdateInstaller.cpp",
         "src/update/UpdateWorker.cpp",
+        "src/mesh/Aes.cpp",
+        "src/mesh/MeshtasticCrypto.cpp",
+        "src/mesh/Protobuf.cpp",
+        "src/mesh/ChannelKey.cpp",
+        "src/mesh/MeshPacketCodec.cpp",
+        "src/lora/HatPower.cpp",
+        "src/lora/LinuxGpio.cpp",
+        "src/lora/LinuxI2c.cpp",
+        "src/lora/LinuxSpi.cpp",
+        "src/lora/LoraRadio.cpp",
+        "src/lora/Pi4ioExpander.cpp",
+        "src/lora/SX1262Hal.cpp",
         "src/ui_main.cpp",
     ]
     cpp_sources = [os.path.join(REPO_ROOT, p) for p in cpp_sources]
@@ -88,8 +107,17 @@ def main():
         print("No LVGL sources found under third_party/lvgl/src -- did you vendor LVGL?")
         sys.exit(1)
 
+    radiolib_sources = sorted(
+        glob.glob(os.path.join(REPO_ROOT, "third_party", "RadioLib", "src", "**", "*.cpp"), recursive=True)
+    )
+    if not radiolib_sources:
+        print("No RadioLib sources found under third_party/RadioLib/src -- did you vendor RadioLib?")
+        sys.exit(1)
+
     objects = []
     for src in cpp_sources:
+        objects.append(compile_unit(src, sysroot, is_cpp=True))
+    for src in radiolib_sources:
         objects.append(compile_unit(src, sysroot, is_cpp=True))
     for src in lvgl_sources:
         objects.append(compile_unit(src, sysroot, is_cpp=False))

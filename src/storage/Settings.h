@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -24,6 +25,12 @@ struct AppSettings {
     // regardless of this setting -- it only controls the automatic
     // startup check. See src/update/UpdateChecker.h.
     bool autoUpdateCheck = true;
+
+    // CardMesh's own direct-LoRa node identity (distinct from MeshMonitor's
+    // own node -- MeshMonitor has no idea this second radio exists).
+    // Generated once on first use and persisted here; 0 means "not yet
+    // generated". See MeshtasticWorker's startup path.
+    std::uint32_t loraNodeNum = 0;
 };
 
 // Persists connection configuration at ~/.config/cardmesh/config.json (mode 0600).

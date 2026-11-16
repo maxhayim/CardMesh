@@ -139,9 +139,11 @@ void NetworkWorker::pollOnce() {
             positioned.push_back(std::move(entry));
         }
 
-        std::lock_guard<std::mutex> lock(mapModel_.mutex);
-        mapModel_.connected = true;
-        mapModel_.nodes = std::move(positioned);
+        {
+            std::lock_guard<std::mutex> lock(mapModel_.mutex);
+            mapModel_.connected = true;
+        }
+        mapModel_.replaceSourceNodes(MapNodeSource::MeshMonitor, std::move(positioned));
     }
 }
 

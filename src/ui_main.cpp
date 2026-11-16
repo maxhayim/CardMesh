@@ -19,8 +19,10 @@
 #include "ui/DashboardModel.h"
 #include "ui/DashboardScreen.h"
 #include "ui/EvdevKeyboard.h"
+#include "ui/LoraMessagesModel.h"
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
+#include "ui/MeshtasticWorker.h"
 #include "ui/NetworkWorker.h"
 #include "update/UpdateWorker.h"
 
@@ -72,18 +74,28 @@ int main() {
             std::string(cardmesh::kGitHubRepo) + ")"));
     tileFetcher.start();
 
+    cardmesh::storage::AppSettings mutableSettings = *settings;
+
     cardmesh::ui::DashboardModel model;
     cardmesh::ui::MapModel mapModel;
+    cardmesh::ui::LoraMessagesModel loraMessages;
     cardmesh::ui::DashboardScreen dashboard(model);
     cardmesh::ui::MapScreen map(mapModel, tileFetcher);
 
     cardmesh::ui::NetworkWorker worker(*settings, model, mapModel);
     worker.start();
 
+    // Independent of NetworkWorker/MeshMonitor by design -- both mesh paths
+    // (REST-relayed and direct over the onboard LoRa hat) run concurrently.
+    // Only decodes the public MediumFast/default-PSK channel for now; real
+    // channel PSKs from MeshMonitor's own channel list are not yet wired in
+    // (see MeshtasticWorker::setChannels).
+    cardmesh::ui::MeshtasticWorker meshtasticWorker(mutableSettings, loraMessages, mapModel);
+    meshtasticWorker.start();
+
     cardmesh::update::UpdateModel updateModel;
     cardmesh::update::UpdateWorker updateWorker(updateModel, cardmesh::kGitHubRepo);
     updateWorker.start();
-    cardmesh::storage::AppSettings mutableSettings = *settings;
     if (mutableSettings.autoUpdateCheck) {
         updateWorker.checkNow();
     }
@@ -181,6 +193,7 @@ int main() {
 
     tileFetcher.stop();
     worker.stop();
+    meshtasticWorker.stop();
     updateWorker.stop();
     return EXIT_SUCCESS;
 }
