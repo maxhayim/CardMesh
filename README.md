@@ -1,25 +1,27 @@
 > [!WARNING]
-> **CardMesh for MeshMonitor is under active development** and not yet stable, features and config may still change. Give the repo a **Star** and **Watch** it to get notified when a new release lands.
+> **CardMesh is under active development** and not yet stable, features and config may still change. Give the repo a **Star** and **Watch** it to get notified when a new release lands.
 
 <p align="center">
-  <img src="assets/branding/logo.png" alt="CardMesh for MeshMonitor" width="620">
+  <img src="assets/branding/logo.png" alt="CardMesh" width="620">
 </p>
 
-<h1 align="center">CardMesh for MeshMonitor</h1>
+<h1 align="center">CardMesh</h1>
 
 <p align="center">
   <strong>Your pocket console for the mesh.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/maxhayim/cardmeshformeshmonitor">
-    <img src="https://img.shields.io/badge/GitHub-maxhayim%2Fcardmeshformeshmonitor-181717?logo=github&logoColor=white" alt="GitHub Repository">
+  <a href="https://github.com/maxhayim/CardMesh">
+    <img src="https://img.shields.io/badge/GitHub-maxhayim%2FCardMesh-181717?logo=github&logoColor=white" alt="GitHub Repository">
   </a>
 </p>
 
-**CardMesh** is a keyboard-first pocket client for **Meshtatsic**, **Meshcore** and **MeshMonitor**, designed specifically for the **M5Stack CardputerZero**.
+**CardMesh** is a keyboard-first pocket client for **MeshMonitor**, **Meshtastic**, and **MeshCore**, built for the M5Stack CardputerZero.
 
-It provides a compact physical interface for accessing MeshMonitor channels, direct messages, nodes, sources, telemetry, and eventually field/deployment tools without requiring a direct connection between the CardputerZero and a Meshtastic radio.
+CardMesh started as a pocket client for MeshMonitor only. It's now expanding to talk directly to the CardputerZero's onboard LoRa hat as well, which means it's becoming the **first client built for the CardputerZero that targets all three — MeshMonitor, Meshtastic, and MeshCore.**
+
+It provides a compact physical interface for accessing MeshMonitor channels, direct messages, nodes, sources, telemetry, and eventually field/deployment tools, with or without a direct connection between the CardputerZero and a Meshtastic/MeshCore radio.
 
 > **MeshMonitor does the heavy lifting. CardMesh puts the mesh in your hand.**
 
@@ -27,9 +29,11 @@ It provides a compact physical interface for accessing MeshMonitor channels, dir
 
 ## Project Status
 
-**Current status:** Early development — v0.1.0 ships the Dashboard screen only  
-**Latest release:** [`v0.1.0`](https://github.com/maxhayim/cardmeshformeshmonitor/releases/tag/v0.1.0)  
-**Repository:** `maxhayim/cardmeshformeshmonitor` (public)
+**Current status:** Early development — v0.1.0 ships the Dashboard screen only, MeshMonitor backend only  
+**Latest release:** [`v0.1.0`](https://github.com/maxhayim/CardMesh/releases/tag/v0.1.0)  
+**Repository:** `maxhayim/CardMesh` (public, renamed from `cardmeshformeshmonitor` — old links redirect)
+
+**What's changed:** CardMesh is expanding beyond MeshMonitor to also talk directly to the CardputerZero's onboard LoRa hat, adding native Meshtastic and MeshCore support alongside the existing MeshMonitor client. See [Roadmap](#roadmap) for what's shipped vs. planned — **direct Meshtastic/MeshCore support is planned but not yet implemented**; v0.1.0 remains MeshMonitor-only.
 
 This repository is now public. The `v0.1.0` `.deb` build has **not** been verified against real CardputerZero hardware or the official online emulator — see [`docs/DEVICE_BUILD.md`](docs/DEVICE_BUILD.md) for exactly what is and isn't confirmed before relying on it.
 
@@ -39,12 +43,12 @@ Licensing is [MIT](LICENSE). See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to
 
 ## Product Name
 
-**Full Name:** CardMesh for MeshMonitor  
+**Full Name:** CardMesh  
 **Short Name:** CardMesh  
 **Package Name:** `cardmesh`  
 **Executable:** `cardmesh`  
 **Target Platform:** M5Stack CardputerZero  
-**Backend:** MeshMonitor REST API v1  
+**Backends:** MeshMonitor REST API v1 (shipped); direct Meshtastic and MeshCore via the CardputerZero's onboard LoRa hat (planned, not yet implemented)  
 
 ### Tagline
 
@@ -87,9 +91,7 @@ than a miniature desktop website.
 
 # Architecture
 
-CardMesh does **not** directly communicate with Meshtastic radios in the initial implementation.
-
-Instead:
+CardMesh v0.1.0 does **not** directly communicate with Meshtastic or MeshCore radios — it only talks to MeshMonitor.
 
 ```text
 Meshtastic / MeshCore / MQTT
@@ -105,6 +107,20 @@ Meshtastic / MeshCore / MQTT
            ▼
     CardputerZero
 ```
+
+**Planned:** a second, direct path using the CardputerZero's onboard LoRa hat, so CardMesh can talk to Meshtastic and MeshCore nodes locally without requiring a MeshMonitor server at all:
+
+```text
+                 MeshMonitor REST API v1 / HTTPS  (shipped)
+                              │
+Meshtastic / MeshCore ──MQTT─┤
+       │                     ▼
+       │                 CardMesh ──► CardputerZero
+       │                     ▲
+       └── CardputerZero LoRa hat (planned, direct — no MeshMonitor needed)
+```
+
+This local LoRa path is the reason for the project name change from "CardMesh for MeshMonitor" to **CardMesh** — MeshMonitor is now one of two ways CardMesh reaches the mesh, not the only one.
 
 MeshMonitor remains responsible for:
 
@@ -402,7 +418,7 @@ The intended CardMesh workflow is:
 
 ```text
 GitHub Repository
-maxhayim/cardmeshformeshmonitor
+maxhayim/CardMesh
         ↓
 Feature Branch
         ↓
@@ -430,7 +446,7 @@ No stable CardMesh release should be considered complete until the release candi
 # Suggested Project Structure
 
 ```text
-cardmeshformeshmonitor/
+CardMesh/
 │
 ├── .github/
 │   ├── workflows/
@@ -1159,12 +1175,10 @@ The MVP is successful when a user can:
 
 # MVP Non-Goals
 
-Do not initially implement:
+Do not implement in v0.1.0 (the MeshMonitor-only MVP):
 
-- Direct BLE Meshtastic communication
-- Direct USB Meshtastic communication
-- Serial Meshtastic communication
-- Meshtastic protobuf stack
+- Direct BLE/USB/serial Meshtastic or MeshCore communication — **now planned** via the CardputerZero's onboard LoRa hat, see [Roadmap](#roadmap). Out of scope for v0.1.0, not out of scope forever.
+- Meshtastic/MeshCore protobuf stacks — same: planned for the LoRa-hat roadmap item, not v0.1.0.
 - Firmware flashing
 - Radio configuration
 - Full maps
@@ -1175,7 +1189,7 @@ Do not initially implement:
 - Multi-server aggregation
 - Full field testing
 
-The core remote-client experience should be stable before advanced functions are added.
+The core MeshMonitor remote-client experience should be stable before advanced functions — including direct LoRa — are added.
 
 ---
 
@@ -1218,6 +1232,15 @@ The core remote-client experience should be stable before advanced functions are
 - Direct-vs-relayed statistics
 - Local field reports
 - Antenna comparison tools
+
+## v0.5 — Direct LoRa (Meshtastic + MeshCore)
+
+- Communicate directly with the CardputerZero's onboard LoRa hat
+- Native Meshtastic protocol support (no MeshMonitor required)
+- Native MeshCore protocol support (no MeshMonitor required)
+- Local node discovery and messaging over LoRa
+- Reconcile/merge local LoRa state with MeshMonitor-backed state when both are configured
+- **Status:** planned, not yet implemented — see [Architecture](#architecture)
 
 ## v1.0 — Stable Release
 
@@ -1482,7 +1505,7 @@ CardMesh should independently implement this architecture specifically for Cardp
 Canonical repository:
 
 ```text
-maxhayim/cardmeshformeshmonitor
+maxhayim/CardMesh
 ```
 
 Recommended workflow:
@@ -1803,7 +1826,7 @@ When using Claude, ChatGPT, Codex, or another coding assistant on this repositor
 12. Do not commit credentials.
 13. Keep the project buildable after major changes.
 14. Add tests for API parsing and state logic.
-15. Do not implement direct Meshtastic radio support unless the project architecture is intentionally changed.
+15. Direct Meshtastic/MeshCore radio support via the CardputerZero's onboard LoRa hat is now a planned, intentional architecture change (see [Roadmap](#roadmap) v0.5) — not an accidental one to avoid. It is not yet implemented; v0.1.0 remains MeshMonitor-only.
 16. Treat `https://cardputer.cc/emulator/` as the primary browser-based CardputerZero UI/runtime test environment.
 17. Validate release candidates in the online emulator before packaging them as stable releases.
 18. Build release packages as ARM64 Debian `.deb` files.
@@ -1824,9 +1847,9 @@ Advanced field tools should not be developed until this core functionality is re
 
 # Final Product Definition
 
-**CardMesh for MeshMonitor** is a fast, keyboard-first pocket client and field console for MeshMonitor built specifically for the M5Stack CardputerZero.
+**CardMesh** is a fast, keyboard-first pocket client and field console built specifically for the M5Stack CardputerZero. It started as a client for MeshMonitor only; it's now the first CardputerZero client targeting **MeshMonitor, Meshtastic, and MeshCore**, adding a direct local path to the latter two via the device's onboard LoRa hat.
 
-Core architecture:
+Core architecture (MeshMonitor path, shipped):
 
 ```text
 CardMesh
@@ -1838,10 +1861,20 @@ MeshMonitor
 Meshtastic / MeshCore / MQTT
 ```
 
+Planned direct-LoRa path (not yet implemented — see [Roadmap](#roadmap) v0.5):
+
+```text
+CardMesh
+   │
+CardputerZero LoRa hat
+   │
+Meshtastic / MeshCore (local, no MeshMonitor required)
+```
+
 Development repository:
 
 ```text
-maxhayim/cardmeshformeshmonitor
+maxhayim/CardMesh
 ```
 
 Package:
