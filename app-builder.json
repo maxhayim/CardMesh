@@ -6,8 +6,8 @@
   "description": "CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore, built for the M5Stack CardputerZero — the first CardputerZero client targeting all three. Talks to a MeshMonitor server over REST, and drives the onboard LoRa hat directly for both Meshtastic and MeshCore protocols (one at a time -- they share the single physical radio).",
 
   "store": {
-    "summary": "Pocket client for MeshMonitor, Meshtastic, and MeshCore mesh networks.",
-    "description": "CardMesh is a keyboard-first pocket client for three mesh-networking protocols at once: MeshMonitor (over REST), and direct Meshtastic/MeshCore over the onboard LoRa hat (one at a time -- they share the single physical radio, switched with a tap). An icon-grid Home screen gets you into any of the three; each has its own channel picker and chat view.",
+    "summary": "Pocket client for Meshtastic and MeshCore LoRa Mesh and MeshMonitor remotely.",
+    "description": "CardMesh is a keyboard-first pocket client for Meshtastic and MeshCore LoRa mesh networks, and MeshMonitor remotely -- the first CardputerZero app for Meshtastic and MeshCore. It talks directly to Meshtastic and MeshCore over the onboard LoRa hat (one at a time -- they share the single physical radio, switched with a tap), and to MeshMonitor over REST. An icon-grid Home screen gets you into any of the three; each has its own channel picker and chat view.",
     "categories": ["Radio & Comms", "Hardware & IoT"],
     "screenshots": ["assets/branding/screenshots/direct-lora-chat.png"],
     "icon": "assets/branding/storeIcon.png",

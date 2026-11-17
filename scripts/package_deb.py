@@ -49,6 +49,15 @@ def main():
     # into that pool, not a package-name subdirectory under usr/share/.
     icon_pool_out = os.path.join(stage, "usr", "share", "APPLaunch", "share", "images")
     logos_out = os.path.join(stage, "usr", "share", "cardmesh", "logos")
+    # NOTE: dev.cardputer.cc's upload-time checker separately warns
+    # "icon declared by .desktop not packed into the package" even with the
+    # icon present here -- its install-path policy (fetched live from the
+    # portal) explicitly allowlists usr/share/APPLaunch/** as "CardputerZero
+    # launcher resources," so this is a path the checker's simpler icon-
+    # presence heuristic just doesn't recognize, not an actual packaging
+    # bug. usr/share/pixmaps/ was tried as a fix and is explicitly REJECTED
+    # by that same policy (shared directory names must start with the
+    # package name; "pixmaps" doesn't) -- don't reintroduce it.
     os.makedirs(lib_out, exist_ok=True)
     os.makedirs(bin_out, exist_ok=True)
     os.makedirs(debian_out, exist_ok=True)
