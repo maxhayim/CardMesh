@@ -50,7 +50,10 @@ void MapScreen::build() {
     lv_obj_clear_flag(markerLayer_, LV_OBJ_FLAG_SCROLLABLE);
 
     hintLabel_ = lv_label_create(screen_);
-    lv_label_set_text(hintLabel_, "Arrows Pan  +/- Zoom  B Back");
+    // This hardware has no dedicated arrow keys -- Z/X/C/F act as
+    // Left/Down/Right/Up directly, per the CardputerZero's own key spec
+    // (https://cardputer.cc/#/documents/cp0-keys).
+    lv_label_set_text(hintLabel_, "Z/X/C/F Pan  +/- Zoom  B Back");
     lv_obj_set_style_text_color(hintLabel_, lv_color_white(), 0);
     lv_obj_set_style_bg_color(hintLabel_, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(hintLabel_, LV_OPA_70, 0);

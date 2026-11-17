@@ -52,7 +52,7 @@ void MeshCoreMessagesScreen::build() {
     lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
 
     helpLabel_ = lv_label_create(screen);
-    lv_label_set_text(helpLabel_, "[Enter] compose  [Arrows] channel  [B]ack");
+    lv_label_set_text(helpLabel_, "[Enter] compose  [Z/C] channel  [B]ack");
     lv_obj_set_style_text_color(helpLabel_, theme::dim(), 0);
     lv_obj_align(helpLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }
@@ -66,7 +66,7 @@ void MeshCoreMessagesScreen::setComposing(bool composing) {
     } else {
         lv_obj_clear_flag(statusLabel_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(helpLabel_, "[Enter] compose  [Arrows] channel  [B]ack");
+        lv_label_set_text(helpLabel_, "[Enter] compose  [Z/C] channel  [B]ack");
     }
 }
 

@@ -138,7 +138,9 @@ void HomeScreen::build() {
     }
 
     hintLabel_ = lv_label_create(screen);
-    lv_label_set_text(hintLabel_, "[Arrows] select  [Enter] open  [S]ettings");
+    // No dedicated arrow keys on this hardware -- Z/C move the selection
+    // left/right (see https://cardputer.cc/#/documents/cp0-keys).
+    lv_label_set_text(hintLabel_, "[Z/C] select  [Enter] open  [S]ettings");
     lv_obj_set_style_text_color(hintLabel_, theme::dim(), 0);
     lv_obj_align(hintLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 
