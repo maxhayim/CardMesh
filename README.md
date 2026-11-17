@@ -992,26 +992,44 @@ Offline message queueing is not part of the MVP.
 
 CardMesh should be highly keyboard-driven.
 
-## Currently implemented (v0.1.0)
+## Currently implemented (v0.3.1)
 
-Only Dashboard and Map exist so far, so this is a subset of the full plan
-below — note `M` currently means **Map**, not the planned Messages screen,
-since Messages doesn't exist yet. This will need reconciling once Messages
-is built.
+The CardputerZero's chiclet keyboard has no dedicated arrow keys at all
+(confirmed against the device's own key-spec docs) — `Z`/`X`/`C`/`F` act as
+Left/Down/Right/Up directly, matching the hardware's own recommendation for
+non-text-input use. Real `KEY_UP`/`DOWN`/`LEFT`/`RIGHT` are also accepted,
+should any other input source send them.
 
 ```text
+Home (icon grid):
+  Z/X/C/F  Move tile selection
+  Enter    Open the highlighted tile (Meshtastic/MeshCore/MeshMonitor/Settings)
+  S        Settings
+
 Dashboard:
-  R    Refresh
-  M    Open Map
-  U    Check for update, or install one already found
-  A    Toggle automatic update checks on/off
-  Q    Quit
+  R        Refresh
+  M        Open Map
+  T        Open MeshMonitor-relayed messages ("Text")
+  K        Open direct MeshCore chat ("Kore")
+  S        Settings
+  Q        Quit
+  fn+K     Jump to the Home icon grid (works from any screen)
 
 Map:
-  Arrows  Pan
-  +/-     Zoom
-  B/Esc   Back to Dashboard
-  Q       Quit
+  Z/X/C/F  Pan
+  +/-      Zoom
+  B/Esc    Back to Dashboard
+  Q        Quit
+
+Direct Meshtastic / MeshCore chat:
+  Enter    Compose a message
+  Z/C      Cycle channel
+  B/Esc    Back (to Home or Dashboard, whichever is set as home)
+
+Settings:
+  F/X      Move selection
+  Enter    Edit the field, or flip a toggle
+  B/Esc    Back
 ```
 
 ### Software updates
@@ -1196,8 +1214,8 @@ The MVP is successful when a user can:
 
 Do not implement in v0.1.0 (the MeshMonitor-only MVP):
 
-- Direct BLE/USB/serial Meshtastic or MeshCore communication — **now planned** via the CardputerZero's onboard LoRa hat, see [Roadmap](#roadmap). Out of scope for v0.1.0, not out of scope forever.
-- Meshtastic/MeshCore protobuf stacks — same: planned for the LoRa-hat roadmap item, not v0.1.0.
+- Direct BLE/USB/serial Meshtastic or MeshCore communication — **since shipped** via the CardputerZero's onboard LoRa hat (not BLE/USB/serial; direct LoRa radio), see [Roadmap](#roadmap). Out of scope for v0.1.0 specifically, not out of scope forever.
+- Meshtastic/MeshCore protobuf stacks — same: shipped as part of the LoRa-hat roadmap item, just not in v0.1.0.
 - Firmware flashing
 - Radio configuration
 - Full maps
@@ -1845,7 +1863,7 @@ When using Claude, ChatGPT, Codex, or another coding assistant on this repositor
 12. Do not commit credentials.
 13. Keep the project buildable after major changes.
 14. Add tests for API parsing and state logic.
-15. Direct Meshtastic/MeshCore radio support via the CardputerZero's onboard LoRa hat is now a planned, intentional architecture change (see [Roadmap](#roadmap) v0.5) — not an accidental one to avoid. It is not yet implemented; v0.1.0 remains MeshMonitor-only.
+15. Direct Meshtastic/MeshCore radio support via the CardputerZero's onboard LoRa hat is a deliberate, implemented architecture change (see [Roadmap](#roadmap) v0.5) — not an accidental one to avoid. Shipped in `v0.3.1`; only one direct protocol can be active at a time, since both share the single physical radio.
 16. Treat `https://cardputer.cc/emulator/` as the primary browser-based CardputerZero UI/runtime test environment.
 17. Validate release candidates in the online emulator before packaging them as stable releases.
 18. Build release packages as ARM64 Debian `.deb` files.
@@ -1880,7 +1898,7 @@ MeshMonitor
 Meshtastic / MeshCore / MQTT
 ```
 
-Planned direct-LoRa path (not yet implemented — see [Roadmap](#roadmap) v0.5):
+Direct-LoRa path (shipped in `v0.3.1` — see [Roadmap](#roadmap) v0.5):
 
 ```text
 CardMesh
