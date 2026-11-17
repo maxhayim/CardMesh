@@ -89,7 +89,7 @@ void SettingsScreen::build() {
     lv_obj_add_flag(editLabel_, LV_OBJ_FLAG_HIDDEN);
 
     helpLabel_ = lv_label_create(screen);
-    lv_label_set_text(helpLabel_, "[Up/Down] select  [Enter] edit  [B]ack");
+    lv_label_set_text(helpLabel_, "[F/X] select  [Enter] edit  [B]ack");
     lv_obj_set_style_text_color(helpLabel_, theme::dim(), 0);
     lv_obj_align(helpLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 
@@ -128,7 +128,7 @@ void SettingsScreen::setEditing(bool editing) {
         lv_label_set_text(helpLabel_, "[Enter] save  [Esc] cancel");
     } else {
         lv_obj_add_flag(editLabel_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(helpLabel_, "[Up/Down] select  [Enter] edit  [B]ack");
+        lv_label_set_text(helpLabel_, "[F/X] select  [Enter] edit  [B]ack");
     }
 }
 
