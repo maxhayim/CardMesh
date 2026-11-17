@@ -215,16 +215,32 @@ this document previously listed as unverified assumptions:
   ("missing ...; required for store apps"). This is not documented anywhere
   in the README and was only discovered by this trial upload.
   `scripts/package_deb.py` now generates a standard freedesktop-style
-  `.desktop` entry (`Name`, `Exec=cardmesh`, `Icon=cardmesh`, `Categories`)
-  at that path, and bundles `assets/branding/appIcon.png` at
-  `usr/share/pixmaps/cardmesh.png` to match `Icon=cardmesh`.
-- **The store submission form's real fields** are now known: app name,
-  one-line summary (≤80 chars), full description, up to 6 comma-separated
-  categories, an optional square-PNG icon (falls back to the icon inside
-  the `.deb` if left empty), and up to 6 screenshots at 320×170. A
-  `store` section in `app-builder.json` can reportedly auto-fill these from
-  a **public** source repository — not applicable here since this repo is
-  private, per the README's "Notes for AI Coding Assistants."
+  `.desktop` entry (`Name`, `Exec=/usr/bin/cardmesh`, `Icon=cardmesh.png`,
+  `Categories`) at that path. **`Exec=` must be an absolute path** --
+  confirmed directly against the on-device launcher
+  (M5CardputerZero-APPLaunch), which rejects a bare/relative Exec as
+  "unsafe" regardless of otherwise-valid `.desktop` formatting. **`Icon=`,
+  in contrast, must be a bare filename** resolved against the launcher's
+  own shared icon pool (`usr/share/APPLaunch/share/images/`), not an
+  absolute path -- the launcher's own journal log reported "failed to
+  preload icon" for an absolute `Icon=` value. `appIcon.png` is bundled
+  into that pool, not `usr/share/pixmaps/`.
+- **The real `app-builder.json` schema is now confirmed** against the
+  official `CardputerZero/AppBuilder` repo's `docs/APP_BUILDER_JSON.md` --
+  this project's `app-builder.json` previously used invented field names
+  (`displayName`, `targetDisplay`, etc.) that the real `czdev publish` /
+  web portal never actually read. The real schema: top-level
+  `package_name`/`version`/`app_name`/`bin_name`/`description`, plus a
+  `store` section (`summary`, `description`, `categories` from a fixed
+  enum, `screenshots` -- **required**, 1-6 × 320×170 PNGs --,
+  `icon` -- square PNG, 128-512px --, `license`, `source_repo`, `author`,
+  `share_code` -- 4 alphanumerics, unique store-wide --, and
+  `permissions`, exactly 7 booleans). `app-builder.json` has been rewritten
+  to match. **Not yet resolved: `store.screenshots` is empty** -- no real
+  on-device screenshot of CardMesh running has been captured, and the
+  schema requires at least one to publish; `share_code: "CMSH"` is an
+  unverified guess, not confirmed available against the live store
+  registry.
 
 Still unconfirmed: whether the package actually *launches and renders*
 correctly once installed — the portal's check is a packaging/metadata

@@ -106,11 +106,11 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_M:
                 result = GlobalKey::ToggleMap;
                 break;
-            case KEY_C:
-                result = GlobalKey::ToggleMessages;
-                break;
             case KEY_T:
                 result = GlobalKey::ToggleRelayMessages;
+                break;
+            case KEY_K:
+                result = GlobalKey::ToggleMeshCore;
                 break;
             case KEY_ENTER:
             case KEY_KPENTER:
@@ -123,17 +123,34 @@ GlobalKey EvdevKeyboard::poll() {
                 // real hardware, see docs/DEVICE_BUILD.md.
                 result = GlobalKey::Back;
                 break;
+            // CardputerZero's chiclet keyboard has no dedicated arrow keys at
+            // all -- confirmed against https://cardputer.cc/#/documents/cp0-keys,
+            // which maps arrows to fn+Z/X/C/F (Left/Down/Right/Up) and
+            // explicitly recommends letting the bare letters act as arrows
+            // directly outside text input, rather than requiring the fn
+            // chord. KEY_UP/DOWN/LEFT/RIGHT are kept too in case some input
+            // source (an external keyboard, an emulator) actually sends them.
             case KEY_UP:
+            case KEY_F:
                 result = GlobalKey::PanUp;
                 break;
             case KEY_DOWN:
+            case KEY_X:
                 result = GlobalKey::PanDown;
                 break;
             case KEY_LEFT:
+            case KEY_Z:
                 result = GlobalKey::PanLeft;
                 break;
             case KEY_RIGHT:
+            case KEY_C:
                 result = GlobalKey::PanRight;
+                break;
+            // fn+K on this hardware sends the standard Home keycode (same
+            // doc as above) -- jumps to the icon-grid Home screen from
+            // anywhere, independent of which screen is "home" at boot.
+            case KEY_HOME:
+                result = GlobalKey::GoHome;
                 break;
             case KEY_EQUAL:
             case KEY_KPPLUS:
@@ -148,6 +165,9 @@ GlobalKey EvdevKeyboard::poll() {
                 break;
             case KEY_A:
                 result = GlobalKey::ToggleAutoUpdate;
+                break;
+            case KEY_S:
+                result = GlobalKey::OpenSettings;
                 break;
             default:
                 break;

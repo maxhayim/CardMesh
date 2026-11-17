@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "EmojiFont.h"
+#include "Theme.h"
 
 namespace cardmesh::ui {
 
@@ -27,19 +28,16 @@ void DashboardScreen::build() {
     lv_obj_set_style_pad_all(screen, 4, 0);
 
     lv_obj_t* title = lv_label_create(screen);
-    lv_label_set_text(title, "CARDMESH");
-    lv_obj_set_style_text_color(title, lv_color_white(), 0);
+    lv_label_set_text(title, "CardMesh");
+    lv_obj_set_style_text_color(title, theme::accent(), 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 2);
 
     statusDot_ = lv_label_create(screen);
     lv_label_set_text(statusDot_, LV_SYMBOL_WARNING);
+    lv_obj_set_style_text_color(statusDot_, theme::warn(), 0);
     lv_obj_align(statusDot_, LV_ALIGN_TOP_RIGHT, -2, 2);
 
-    lv_obj_t* divider = lv_obj_create(screen);
-    lv_obj_set_size(divider, 312, 1);
-    lv_obj_set_style_bg_color(divider, lv_color_white(), 0);
-    lv_obj_set_style_border_width(divider, 0, 0);
-    lv_obj_align(divider, LV_ALIGN_TOP_LEFT, 2, 20);
+    theme::makeDivider(screen, 312, 2, 20);
 
     sourceLabel_ = lv_label_create(screen);
     lv_label_set_text(sourceLabel_, "SOURCE: --");
@@ -51,28 +49,36 @@ void DashboardScreen::build() {
         lv_obj_set_style_text_font(sourceLabel_, sourceLabelFont_, 0);
     }
 
+    // A single rounded "card" behind the stat rows -- Meshtastic's own
+    // node-list row styling, scaled up to hold the whole stat block rather
+    // than one card per row (this screen is only 320x170).
+    lv_obj_t* card = lv_obj_create(screen);
+    lv_obj_set_size(card, 312, 84);
+    lv_obj_align(card, LV_ALIGN_TOP_LEFT, 2, 46);
+    theme::applyCardStyle(card);
+
     struct Row {
         const char* label;
         int y;
         lv_obj_t** valueOut;
     };
     const Row rows[] = {
-        {"Nodes", 46, &nodesValue_},
-        {"Active", 64, &activeValue_},
-        {"Channels", 82, &channelsValue_},
-        {"Unread", 100, &unreadValue_},
+        {"Nodes", 4, &nodesValue_},
+        {"Active", 24, &activeValue_},
+        {"Channels", 44, &channelsValue_},
+        {"Unread", 64, &unreadValue_},
     };
 
     for (const auto& row : rows) {
-        lv_obj_t* nameLabel = lv_label_create(screen);
+        lv_obj_t* nameLabel = lv_label_create(card);
         lv_label_set_text(nameLabel, row.label);
-        lv_obj_set_style_text_color(nameLabel, lv_color_white(), 0);
-        lv_obj_align(nameLabel, LV_ALIGN_TOP_LEFT, 4, row.y);
+        lv_obj_set_style_text_color(nameLabel, theme::dim(), 0);
+        lv_obj_align(nameLabel, LV_ALIGN_TOP_LEFT, 6, row.y);
 
-        lv_obj_t* valueLabel = lv_label_create(screen);
+        lv_obj_t* valueLabel = lv_label_create(card);
         lv_label_set_text(valueLabel, "--");
         lv_obj_set_style_text_color(valueLabel, lv_color_white(), 0);
-        lv_obj_align(valueLabel, LV_ALIGN_TOP_RIGHT, -4, row.y);
+        lv_obj_align(valueLabel, LV_ALIGN_TOP_RIGHT, -6, row.y);
         *row.valueOut = valueLabel;
     }
 
@@ -82,8 +88,8 @@ void DashboardScreen::build() {
     lv_obj_align(updateLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
 
     statusLabel_ = lv_label_create(screen);
-    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [C]hat [T]ext [U]pdate [A]uto [Q]uit");
-    lv_obj_set_style_text_color(statusLabel_, lv_color_white(), 0);
+    lv_label_set_text(statusLabel_, "[R]efresh [M]ap [T]ext [K]ore [S]ettings [Q]uit");
+    lv_obj_set_style_text_color(statusLabel_, theme::dim(), 0);
     lv_obj_align(statusLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }
 
@@ -111,6 +117,7 @@ void DashboardScreen::refresh() {
 
     if (connected != lastConnected_) {
         lv_label_set_text(statusDot_, connected ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE);
+        lv_obj_set_style_text_color(statusDot_, connected ? theme::accent() : theme::danger(), 0);
         lastConnected_ = connected;
     }
     if (sourceName != lastSourceName_ || statusMessage != lastStatusMessage_) {
@@ -134,6 +141,9 @@ void DashboardScreen::refresh() {
     }
     if (unreadCount != lastUnreadCount_) {
         setValueText(unreadValue_, unreadCount);
+        // MeshCore's unread-badge convention: draw attention in red when
+        // there's something new, otherwise it's just another plain stat.
+        lv_obj_set_style_text_color(unreadValue_, unreadCount > 0 ? theme::danger() : lv_color_white(), 0);
         lastUnreadCount_ = unreadCount;
     }
     if (updateStatusLine != lastUpdateStatusLine_) {

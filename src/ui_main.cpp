@@ -4,29 +4,37 @@
 // NOT been run against real CardputerZero hardware or the online emulator —
 // see docs/DEVICE_BUILD.md for exactly what is and isn't verified.
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include "lvgl.h"
 
 #include "Version.h"
 #include "map/TileFetcher.h"
 #include "storage/Settings.h"
+#include "ui/BootScreen.h"
 #include "ui/DashboardModel.h"
 #include "ui/DashboardScreen.h"
 #include "ui/EvdevKeyboard.h"
+#include "ui/HomeScreen.h"
 #include "ui/LoraMessagesModel.h"
 #include "ui/LoraMessagesScreen.h"
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
+#include "ui/MeshCoreMessagesModel.h"
+#include "ui/MeshCoreMessagesScreen.h"
+#include "ui/MeshCoreWorker.h"
 #include "ui/MeshMonitorMessagesModel.h"
 #include "ui/MeshMonitorMessagesScreen.h"
 #include "ui/MeshtasticWorker.h"
 #include "ui/NetworkWorker.h"
+#include "ui/SettingsScreen.h"
 #include "update/UpdateWorker.h"
 #include "mesh/ChannelKey.h"
 #include "mesh/MeshPacketCodec.h"
@@ -38,7 +46,7 @@ std::string envOr(const char* name, const std::string& fallback) {
     return (value != nullptr && value[0] != '\0') ? std::string(value) : fallback;
 }
 
-enum class ActiveScreen { Dashboard, Map, Messages, RelayMessages };
+enum class ActiveScreen { Home, Dashboard, Map, Messages, RelayMessages, MeshCore, Settings };
 
 }  // namespace
 
@@ -85,15 +93,26 @@ int main() {
     cardmesh::ui::MapModel mapModel;
     cardmesh::ui::LoraMessagesModel loraMessages;
     cardmesh::ui::MeshMonitorMessagesModel relayMessagesModel;
+    cardmesh::ui::MeshCoreMessagesModel meshCoreMessagesModel;
+    cardmesh::ui::BootScreen boot;
+    cardmesh::ui::HomeScreen home;
+    cardmesh::ui::SettingsScreen settingsScreen;
     cardmesh::ui::DashboardScreen dashboard(model);
     cardmesh::ui::MapScreen map(mapModel, tileFetcher);
     cardmesh::ui::LoraMessagesScreen messages(loraMessages);
     cardmesh::ui::MeshMonitorMessagesScreen relayMessages(relayMessagesModel);
+    cardmesh::ui::MeshCoreMessagesScreen meshCoreMessages(meshCoreMessagesModel);
 
     // Independent of NetworkWorker/MeshMonitor by design -- both mesh paths
     // (REST-relayed and direct over the onboard LoRa hat) run concurrently.
     cardmesh::ui::MeshtasticWorker meshtasticWorker(mutableSettings, loraMessages, mapModel);
     meshtasticWorker.start();
+
+    // MeshCoreWorker shares the single physical LoRa radio with
+    // MeshtasticWorker (incompatible RF configs, so only one may own it at
+    // a time) -- it starts only when the MeshCore screen is opened, and the
+    // Dashboard loop below swaps ownership on entry/exit of that screen.
+    cardmesh::ui::MeshCoreWorker meshCoreWorker(meshCoreMessagesModel);
 
     cardmesh::ui::NetworkWorker worker(*settings, model, mapModel, relayMessagesModel);
     // Feeds MeshMonitor's own channel list (and each channel's base64 PSK,
@@ -126,23 +145,113 @@ int main() {
         updateWorker.checkNow();
     }
 
-    ActiveScreen active = ActiveScreen::Dashboard;
-    lv_screen_load(dashboard.screenObj());
+    // Fixed for the whole session: the 'S' key only changes the persisted
+    // setting for the *next* launch, not the currently-running navigation
+    // tree, so there's no need to re-check mutableSettings mid-session.
+    const bool homeIsIconGrid = !mutableSettings.homeScreenIsDashboard;
+
+    lv_screen_load(boot.screenObj());
+    {
+        const auto bootStart = std::chrono::steady_clock::now();
+        while (std::chrono::steady_clock::now() - bootStart < std::chrono::milliseconds(1500)) {
+            const std::uint32_t sleepMs = lv_timer_handler();
+            constexpr std::uint32_t kMaxSleepMs = 50;
+            const std::uint32_t clampedSleepMs =
+                (sleepMs > 0 && sleepMs <= kMaxSleepMs) ? sleepMs : kMaxSleepMs;
+            std::this_thread::sleep_for(std::chrono::milliseconds(clampedSleepMs));
+        }
+    }
+
+    ActiveScreen active = homeIsIconGrid ? ActiveScreen::Home : ActiveScreen::Dashboard;
+    lv_screen_load(homeIsIconGrid ? home.screenObj() : dashboard.screenObj());
+
+    // Which channel each direct-LoRa screen currently sends on; cycled with
+    // Left/Right when not composing (see PanLeft/PanRight below).
+    // MeshMonitor-relayed sends use NetworkWorker's own primary-channel
+    // detection instead (see NetworkWorker::pollOnce), so RelayMessages has
+    // no channel picker.
+    std::string selectedMeshtasticChannel = "MediumFast";
+    std::string selectedMeshCoreChannel = "Public";
+
+    auto cycleChannel = [](std::vector<std::string> names, const std::string& current, int direction) {
+        if (names.empty()) {
+            return current;
+        }
+        auto it = std::find(names.begin(), names.end(), current);
+        std::size_t index = (it != names.end()) ? static_cast<std::size_t>(it - names.begin()) : 0;
+        index = (index + names.size() + static_cast<std::size_t>(direction)) % names.size();
+        return names[index];
+    };
+
+    // Shared by both the Home screen's tiles and the Dashboard's own
+    // direct-protocol hotkeys ('C'/'K') -- idempotent, so it's safe to call
+    // regardless of which worker was already running.
+    auto enterMeshtastic = [&]() {
+        if (meshCoreWorker.isRunning()) {
+            meshCoreWorker.stop();
+        }
+        if (!meshtasticWorker.isRunning()) {
+            meshtasticWorker.start();
+        }
+        messages.setChannelName(selectedMeshtasticChannel);
+        active = ActiveScreen::Messages;
+        lv_screen_load(messages.screenObj());
+    };
+    auto enterMeshCore = [&]() {
+        if (meshtasticWorker.isRunning()) {
+            meshtasticWorker.stop();
+        }
+        if (!meshCoreWorker.isRunning()) {
+            meshCoreWorker.start();
+        }
+        meshCoreMessages.setChannelName(selectedMeshCoreChannel);
+        active = ActiveScreen::MeshCore;
+        lv_screen_load(meshCoreMessages.screenObj());
+    };
+    auto enterSettings = [&]() {
+        settingsScreen.renderValues(mutableSettings);
+        active = ActiveScreen::Settings;
+        lv_screen_load(settingsScreen.screenObj());
+    };
+
+    // Applies a text/int field edit (toggles are flipped immediately
+    // elsewhere, never routed through here) and persists it right away,
+    // same as every other settings change in this file.
+    auto commitSettingsField = [&](cardmesh::ui::SettingsField field, const std::string& value) {
+        switch (field) {
+            case cardmesh::ui::SettingsField::Server:
+                mutableSettings.server = value;
+                break;
+            case cardmesh::ui::SettingsField::Port:
+                try {
+                    mutableSettings.port = std::stoi(value);
+                } catch (...) {
+                    // invalid input (empty, non-numeric) -- keep the old port
+                }
+                break;
+            case cardmesh::ui::SettingsField::Token:
+                mutableSettings.apiToken = value;
+                break;
+            case cardmesh::ui::SettingsField::TileServer:
+                mutableSettings.tileServerTemplate = value;
+                break;
+            default:
+                break;  // Https/AutoUpdate/HomeIsDashboard are toggles, never reach here
+        }
+        cardmesh::storage::Settings::save(mutableSettings);
+        settingsScreen.renderValues(mutableSettings);
+    };
 
     // Composing is handled separately from the GlobalKey shortcut switch
     // below: while composing, every printable key is message text, not a
     // shortcut (typing 'm' must not open the Map). See EvdevKeyboard::poll
     // vs. pollText. Shared across both message screens -- `active` says
     // which one, since only one can be composing at a time.
-    //
-    // Direct-LoRa MVP scope: always sends on the public "MediumFast"
-    // channel -- there's no channel picker yet, so a real per-channel PSK
-    // learned via onChannelsUpdated above is only used for *decoding*
-    // incoming traffic, not for choosing where outgoing messages go.
-    // (MeshMonitor-relayed sends use NetworkWorker's own primary-channel
-    // detection instead -- see NetworkWorker::pollOnce.)
     bool composing = false;
     std::string composeBuffer;
+    // Which Settings field is being edited, meaningful only while
+    // `composing` is true and `active == ActiveScreen::Settings`.
+    cardmesh::ui::SettingsField editingSettingsField = cardmesh::ui::SettingsField::Server;
 
     bool running = true;
     while (running) {
@@ -154,12 +263,24 @@ int main() {
             model.updateStatusLine = updateModel.statusMessage;
         }
 
-        if (active == ActiveScreen::Dashboard) {
+        if (active == ActiveScreen::Home) {
+            bool meshMonitorConnected;
+            {
+                std::lock_guard<std::mutex> lock(model.mutex);
+                meshMonitorConnected = model.connected;
+            }
+            home.refresh(meshtasticWorker.isRunning(), meshCoreWorker.isRunning(), meshMonitorConnected);
+        } else if (active == ActiveScreen::Dashboard) {
             dashboard.refresh();
         } else if (active == ActiveScreen::Map) {
             map.refresh();
         } else if (active == ActiveScreen::Messages) {
             messages.refresh();
+        } else if (active == ActiveScreen::MeshCore) {
+            meshCoreMessages.refresh();
+        } else if (active == ActiveScreen::Settings) {
+            // Static until the user edits/toggles something, which already
+            // re-renders explicitly -- no per-tick polling needed.
         } else {
             relayMessages.refresh();
         }
@@ -173,25 +294,37 @@ int main() {
                     composing = false;
                     composeBuffer.clear();
                     if (active == ActiveScreen::Messages) messages.setComposing(false);
+                    else if (active == ActiveScreen::MeshCore) meshCoreMessages.setComposing(false);
+                    else if (active == ActiveScreen::Settings) settingsScreen.setEditing(false);
                     else relayMessages.setComposing(false);
                 } else if (textEvent.enterPressed) {
-                    if (!composeBuffer.empty()) {
-                        if (active == ActiveScreen::Messages) {
-                            meshtasticWorker.sendText("MediumFast", composeBuffer);
-                        } else {
-                            worker.queueSendMessage(composeBuffer);
+                    if (active == ActiveScreen::Settings) {
+                        commitSettingsField(editingSettingsField, composeBuffer);
+                        settingsScreen.setEditing(false);
+                    } else {
+                        if (!composeBuffer.empty()) {
+                            if (active == ActiveScreen::Messages) {
+                                meshtasticWorker.sendText(selectedMeshtasticChannel, composeBuffer);
+                            } else if (active == ActiveScreen::MeshCore) {
+                                meshCoreWorker.sendText(selectedMeshCoreChannel, composeBuffer);
+                            } else {
+                                worker.queueSendMessage(composeBuffer);
+                            }
                         }
+                        if (active == ActiveScreen::Messages) messages.setComposing(false);
+                        else if (active == ActiveScreen::MeshCore) meshCoreMessages.setComposing(false);
+                        else relayMessages.setComposing(false);
                     }
                     composing = false;
                     composeBuffer.clear();
-                    if (active == ActiveScreen::Messages) messages.setComposing(false);
-                    else relayMessages.setComposing(false);
                 } else {
                     if (textEvent.backspace && !composeBuffer.empty()) {
                         composeBuffer.pop_back();
                     }
                     composeBuffer += textEvent.chars;
                     if (active == ActiveScreen::Messages) messages.setComposeText(composeBuffer);
+                    else if (active == ActiveScreen::MeshCore) meshCoreMessages.setComposeText(composeBuffer);
+                    else if (active == ActiveScreen::Settings) settingsScreen.setEditingText(composeBuffer);
                     else relayMessages.setComposeText(composeBuffer);
                 }
             }
@@ -209,25 +342,69 @@ int main() {
                     lv_screen_load(map.screenObj());
                 }
                 break;
-            case cardmesh::ui::GlobalKey::ToggleMessages:
-                if (active == ActiveScreen::Dashboard) {
-                    active = ActiveScreen::Messages;
-                    lv_screen_load(messages.screenObj());
-                }
-                break;
             case cardmesh::ui::GlobalKey::ToggleRelayMessages:
                 if (active == ActiveScreen::Dashboard) {
                     active = ActiveScreen::RelayMessages;
                     lv_screen_load(relayMessages.screenObj());
                 }
                 break;
+            case cardmesh::ui::GlobalKey::ToggleMeshCore:
+                if (active == ActiveScreen::Dashboard) {
+                    enterMeshCore();
+                }
+                break;
             case cardmesh::ui::GlobalKey::StartCompose:
-                if (active == ActiveScreen::Messages || active == ActiveScreen::RelayMessages) {
+                if (active == ActiveScreen::Home) {
+                    switch (home.selected()) {
+                        case cardmesh::ui::HomeTile::Meshtastic:
+                            enterMeshtastic();
+                            break;
+                        case cardmesh::ui::HomeTile::MeshCore:
+                            enterMeshCore();
+                            break;
+                        case cardmesh::ui::HomeTile::MeshMonitor:
+                            active = ActiveScreen::Dashboard;
+                            lv_screen_load(dashboard.screenObj());
+                            break;
+                        case cardmesh::ui::HomeTile::Settings:
+                            enterSettings();
+                            break;
+                    }
+                } else if (active == ActiveScreen::Settings) {
+                    const cardmesh::ui::SettingsField field = settingsScreen.selected();
+                    if (cardmesh::ui::SettingsScreen::kindOf(field) == cardmesh::ui::SettingsFieldKind::Toggle) {
+                        switch (field) {
+                            case cardmesh::ui::SettingsField::Https:
+                                mutableSettings.https = !mutableSettings.https;
+                                break;
+                            case cardmesh::ui::SettingsField::AutoUpdate:
+                                mutableSettings.autoUpdateCheck = !mutableSettings.autoUpdateCheck;
+                                break;
+                            case cardmesh::ui::SettingsField::HomeIsDashboard:
+                                mutableSettings.homeScreenIsDashboard = !mutableSettings.homeScreenIsDashboard;
+                                break;
+                            default:
+                                break;
+                        }
+                        cardmesh::storage::Settings::save(mutableSettings);
+                        settingsScreen.renderValues(mutableSettings);
+                    } else {
+                        editingSettingsField = field;
+                        composeBuffer = cardmesh::ui::SettingsScreen::editableValue(mutableSettings, field);
+                        composing = true;
+                        settingsScreen.setEditing(true);
+                        settingsScreen.setEditingText(composeBuffer);
+                    }
+                } else if (active == ActiveScreen::Messages || active == ActiveScreen::RelayMessages ||
+                    active == ActiveScreen::MeshCore) {
                     composing = true;
                     composeBuffer.clear();
                     if (active == ActiveScreen::Messages) {
                         messages.setComposing(true);
                         messages.setComposeText("");
+                    } else if (active == ActiveScreen::MeshCore) {
+                        meshCoreMessages.setComposing(true);
+                        meshCoreMessages.setComposeText("");
                     } else {
                         relayMessages.setComposing(true);
                         relayMessages.setComposeText("");
@@ -236,22 +413,64 @@ int main() {
                 break;
             case cardmesh::ui::GlobalKey::Back:
                 if (active == ActiveScreen::Map || active == ActiveScreen::Messages ||
-                    active == ActiveScreen::RelayMessages) {
-                    active = ActiveScreen::Dashboard;
-                    lv_screen_load(dashboard.screenObj());
+                    active == ActiveScreen::RelayMessages || active == ActiveScreen::MeshCore ||
+                    active == ActiveScreen::Settings) {
+                    if (active == ActiveScreen::MeshCore) {
+                        // Hand the radio back to direct Meshtastic.
+                        meshCoreWorker.stop();
+                        meshtasticWorker.start();
+                    }
+                    // Map/RelayMessages are only reachable from the
+                    // Dashboard regardless of what's "home" (see
+                    // ToggleMap/ToggleRelayMessages above), so they always
+                    // return there; Messages/MeshCore/Settings return to
+                    // whichever screen is actually home.
+                    if ((active == ActiveScreen::Map || active == ActiveScreen::RelayMessages) ||
+                        !homeIsIconGrid) {
+                        active = ActiveScreen::Dashboard;
+                        lv_screen_load(dashboard.screenObj());
+                    } else {
+                        active = ActiveScreen::Home;
+                        lv_screen_load(home.screenObj());
+                    }
+                } else if (active == ActiveScreen::Dashboard && homeIsIconGrid) {
+                    active = ActiveScreen::Home;
+                    lv_screen_load(home.screenObj());
                 }
                 break;
             case cardmesh::ui::GlobalKey::PanUp:
                 if (active == ActiveScreen::Map) map.panUp();
+                else if (active == ActiveScreen::Settings) settingsScreen.moveUp();
                 break;
             case cardmesh::ui::GlobalKey::PanDown:
                 if (active == ActiveScreen::Map) map.panDown();
+                else if (active == ActiveScreen::Settings) settingsScreen.moveDown();
                 break;
             case cardmesh::ui::GlobalKey::PanLeft:
-                if (active == ActiveScreen::Map) map.panLeft();
+                if (active == ActiveScreen::Map) {
+                    map.panLeft();
+                } else if (active == ActiveScreen::Home) {
+                    home.moveLeft();
+                } else if (active == ActiveScreen::Messages) {
+                    selectedMeshtasticChannel = cycleChannel(meshtasticWorker.channelNames(), selectedMeshtasticChannel, -1);
+                    messages.setChannelName(selectedMeshtasticChannel);
+                } else if (active == ActiveScreen::MeshCore) {
+                    selectedMeshCoreChannel = cycleChannel(meshCoreWorker.channelNames(), selectedMeshCoreChannel, -1);
+                    meshCoreMessages.setChannelName(selectedMeshCoreChannel);
+                }
                 break;
             case cardmesh::ui::GlobalKey::PanRight:
-                if (active == ActiveScreen::Map) map.panRight();
+                if (active == ActiveScreen::Map) {
+                    map.panRight();
+                } else if (active == ActiveScreen::Home) {
+                    home.moveRight();
+                } else if (active == ActiveScreen::Messages) {
+                    selectedMeshtasticChannel = cycleChannel(meshtasticWorker.channelNames(), selectedMeshtasticChannel, 1);
+                    messages.setChannelName(selectedMeshtasticChannel);
+                } else if (active == ActiveScreen::MeshCore) {
+                    selectedMeshCoreChannel = cycleChannel(meshCoreWorker.channelNames(), selectedMeshCoreChannel, 1);
+                    meshCoreMessages.setChannelName(selectedMeshCoreChannel);
+                }
                 break;
             case cardmesh::ui::GlobalKey::ZoomIn:
                 if (active == ActiveScreen::Map) map.zoomIn();
@@ -281,6 +500,25 @@ int main() {
                         mutableSettings.autoUpdateCheck ? "Auto-update: ON" : "Auto-update: OFF";
                 }
                 break;
+            case cardmesh::ui::GlobalKey::OpenSettings:
+                if (active == ActiveScreen::Home || active == ActiveScreen::Dashboard) {
+                    enterSettings();
+                }
+                break;
+            case cardmesh::ui::GlobalKey::GoHome:
+                // Works from anywhere, independent of whichever screen is
+                // "home" at boot -- unlike Back, this always lands on the
+                // icon grid itself, not the Dashboard.
+                if (active != ActiveScreen::Home) {
+                    if (active == ActiveScreen::MeshCore) {
+                        // Hand the radio back to direct Meshtastic, same as Back.
+                        meshCoreWorker.stop();
+                        meshtasticWorker.start();
+                    }
+                    active = ActiveScreen::Home;
+                    lv_screen_load(home.screenObj());
+                }
+                break;
             case cardmesh::ui::GlobalKey::None:
                 break;
         }
@@ -298,6 +536,7 @@ int main() {
     tileFetcher.stop();
     worker.stop();
     meshtasticWorker.stop();
+    meshCoreWorker.stop();
     updateWorker.stop();
     return EXIT_SUCCESS;
 }

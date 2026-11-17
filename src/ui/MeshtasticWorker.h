@@ -37,6 +37,7 @@ public:
 
     void start();
     void stop();
+    bool isRunning() const { return running_; }
 
     // Replaces the set of channels this node will decrypt/decode traffic
     // for and can send on. Always includes the public MediumFast/default-PSK
@@ -47,6 +48,11 @@ public:
     // Queues an outgoing text message; sent from the worker thread on its
     // next idle tick. Returns false only if the named channel isn't known.
     bool sendText(const std::string& channelName, const std::string& text);
+
+    // Names of every channel this node currently knows (for a channel
+    // picker UI) -- same data as channelsSnapshot(), just the names and
+    // public to callers outside the worker thread.
+    std::vector<std::string> channelNames();
 
 private:
     void run();

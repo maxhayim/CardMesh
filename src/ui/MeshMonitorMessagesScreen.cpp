@@ -1,5 +1,7 @@
 #include "MeshMonitorMessagesScreen.h"
 
+#include "Theme.h"
+
 namespace cardmesh::ui {
 
 namespace {
@@ -19,21 +21,16 @@ void MeshMonitorMessagesScreen::build() {
     lv_obj_set_style_pad_all(screen, 4, 0);
 
     lv_obj_t* title = lv_label_create(screen);
-    lv_label_set_text(title, "MESHMONITOR");
-    lv_obj_set_style_text_color(title, lv_color_white(), 0);
+    lv_label_set_text(title, "MeshMonitor");
+    lv_obj_set_style_text_color(title, theme::accent(), 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 2);
 
-    lv_obj_t* divider = lv_obj_create(screen);
-    lv_obj_set_size(divider, 312, 1);
-    lv_obj_set_style_bg_color(divider, lv_color_white(), 0);
-    lv_obj_set_style_border_width(divider, 0, 0);
-    lv_obj_align(divider, LV_ALIGN_TOP_LEFT, 2, 20);
+    theme::makeDivider(screen, 312, 2, 20);
 
     list_ = lv_list_create(screen);
     lv_obj_set_size(list_, 312, 120);
     lv_obj_align(list_, LV_ALIGN_TOP_LEFT, 2, 26);
-    lv_obj_set_style_bg_color(list_, lv_color_black(), 0);
-    lv_obj_set_style_border_width(list_, 0, 0);
+    theme::applyCardStyle(list_);
 
     composeLabel_ = lv_label_create(screen);
     lv_label_set_text(composeLabel_, "");
@@ -43,7 +40,7 @@ void MeshMonitorMessagesScreen::build() {
 
     helpLabel_ = lv_label_create(screen);
     lv_label_set_text(helpLabel_, "[Enter] compose  [B]ack");
-    lv_obj_set_style_text_color(helpLabel_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(helpLabel_, theme::dim(), 0);
     lv_obj_align(helpLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }
 

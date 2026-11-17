@@ -32,6 +32,10 @@ public:
     // setComposing(true) is active).
     void setComposeText(const std::string& text);
 
+    // Updates the "Channel: X" label -- ui_main.cpp owns which channel is
+    // currently selected for sending (see MeshtasticWorker::channelNames).
+    void setChannelName(const std::string& name);
+
 private:
     void build();
 
@@ -39,6 +43,7 @@ private:
 
     lv_obj_t* screen_ = nullptr;
     lv_obj_t* statusLabel_ = nullptr;
+    lv_obj_t* channelLabel_ = nullptr;
     lv_obj_t* helpLabel_ = nullptr;
     lv_obj_t* list_ = nullptr;
     lv_obj_t* composeLabel_ = nullptr;

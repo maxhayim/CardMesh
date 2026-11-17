@@ -9,10 +9,17 @@ enum class GlobalKey {
     Refresh,
     Quit,
     ToggleMap,  // 'M' from the Dashboard: open the Map screen
-    ToggleMessages,  // 'C' from the Dashboard: open the direct-LoRa Messages ("Chat") screen
     ToggleRelayMessages,  // 'T' from the Dashboard: open the MeshMonitor-relayed messages ("Text") screen
-    StartCompose,  // Enter from a Messages screen (not yet composing): start typing a message
-    Back,       // Esc/'B' from the Map/Messages screen: return to the Dashboard
+    ToggleMeshCore,  // 'K' from the Dashboard: open the direct-MeshCore screen (swaps the radio off Meshtastic)
+    StartCompose,  // Enter: start typing a message (Messages screens), or open the highlighted tile (Home)
+    Back,       // Esc/'B': return to the Dashboard/Home, depending on screen and context
+    // This hardware has no dedicated arrow keys -- these fire on bare
+    // F/Z/X/C (the device's documented no-fn arrow recommendation) as well
+    // as real KEY_UP/DOWN/LEFT/RIGHT, should those ever arrive from some
+    // other input source. PanLeft/PanRight also move the Home screen's tile
+    // cursor. Direct-LoRa chat ("Chat", formerly plain 'C') is reachable via
+    // the Home screen's Meshtastic tile instead, since plain 'C' is now
+    // PanRight.
     PanUp,
     PanDown,
     PanLeft,
@@ -21,6 +28,8 @@ enum class GlobalKey {
     ZoomOut,
     CheckForUpdate,   // 'U' from the Dashboard: check now, or install if one was already found
     ToggleAutoUpdate,  // 'A' from the Dashboard: toggle automatic startup update checks
+    OpenSettings,  // 'S' from the Home screen or Dashboard: open the Settings screen
+    GoHome,  // Standard Home keycode (this hardware's fn+K): jump to the icon-grid Home screen from anywhere
 };
 
 // Result of a pollText() call: the printable characters typed since the

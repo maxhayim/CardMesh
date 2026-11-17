@@ -1,14 +1,28 @@
 {
-  "package": "cardmesh",
-  "executable": "cardmesh",
-  "displayName": "CardMesh",
-  "tagline": "Your pocket console for the mesh.",
-  "description": "CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore, built for the M5Stack CardputerZero — the first CardputerZero client targeting all three. This release (v0.1.0) ships the MeshMonitor-based Dashboard; direct Meshtastic/MeshCore support via the onboard LoRa hat is planned.",
-  "version": "0.1.0",
-  "architecture": "arm64",
-  "targetDisplay": {
-    "width": 320,
-    "height": 170
-  },
-  "repository": "https://github.com/maxhayim/CardMesh"
+  "package_name": "cardmesh",
+  "version": "0.3.1",
+  "app_name": "CardMesh",
+  "bin_name": "cardmesh",
+  "description": "CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore, built for the M5Stack CardputerZero — the first CardputerZero client targeting all three. Talks to a MeshMonitor server over REST, and drives the onboard LoRa hat directly for both Meshtastic and MeshCore protocols (one at a time -- they share the single physical radio).",
+
+  "store": {
+    "summary": "Pocket client for MeshMonitor, Meshtastic, and MeshCore mesh networks.",
+    "description": "CardMesh is a keyboard-first pocket client for three mesh-networking protocols at once: MeshMonitor (over REST), and direct Meshtastic/MeshCore over the onboard LoRa hat (one at a time -- they share the single physical radio, switched with a tap). An icon-grid Home screen gets you into any of the three; each has its own channel picker and chat view.",
+    "categories": ["Radio & Comms", "Hardware & IoT"],
+    "screenshots": ["assets/branding/screenshots/direct-lora-chat.png"],
+    "icon": "assets/branding/storeIcon.png",
+    "license": "MIT",
+    "source_repo": "https://github.com/maxhayim/CardMesh",
+    "author": { "github": "maxhayim", "display_name": "Max Hayim" },
+    "share_code": "CMSH",
+    "permissions": {
+      "camera": false,
+      "microphone": false,
+      "imu": false,
+      "network": true,
+      "additional_hardware": true,
+      "background_service": false,
+      "external_display": false
+    }
+  }
 }

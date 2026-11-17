@@ -40,15 +40,21 @@ def main():
     bin_out = os.path.join(stage, "usr", "bin")
     debian_out = os.path.join(stage, "DEBIAN")
     desktop_out = os.path.join(stage, "usr", "share", "APPLaunch", "applications")
-    # Store policy forbids files loose directly under usr/share/ (e.g. the
-    # traditional usr/share/pixmaps/cardmesh.png) -- everything under
-    # usr/share/ must live inside a package-name subdirectory instead.
-    icon_out = os.path.join(stage, "usr", "share", "cardmesh")
+    # The launcher (M5CardputerZero-APPLaunch) resolves a bare Icon= value
+    # (not an absolute path) against its own shared icon pool -- confirmed
+    # directly on-device via its journal log ("[HOME] failed to preload
+    # icon: /usr/share/cardmesh/cardmesh.png" when Icon= was an absolute
+    # path instead). Every icon file CardMesh ships -- its own launcher
+    # icon and the Meshtastic/MeshMonitor logos for the Home screen -- goes
+    # into that pool, not a package-name subdirectory under usr/share/.
+    icon_pool_out = os.path.join(stage, "usr", "share", "APPLaunch", "share", "images")
+    logos_out = os.path.join(stage, "usr", "share", "cardmesh", "logos")
     os.makedirs(lib_out, exist_ok=True)
     os.makedirs(bin_out, exist_ok=True)
     os.makedirs(debian_out, exist_ok=True)
     os.makedirs(desktop_out, exist_ok=True)
-    os.makedirs(icon_out, exist_ok=True)
+    os.makedirs(icon_pool_out, exist_ok=True)
+    os.makedirs(logos_out, exist_ok=True)
 
     # zig objcopy --strip-debug/--strip-all are unimplemented for ELF as of
     # zig 0.16.0, so the shipped binary keeps its debug info (larger, but
@@ -84,18 +90,26 @@ def main():
     os.chmod(wrapper_path, 0o755)
 
     # dev.cardputer.cc's store validator requires a desktop-entry file at
-    # this exact path (confirmed via its "Preliminary check report" --
-    # not documented anywhere in the README, discovered by trial upload).
-    # Display name is app-builder.json's displayName ("CardMesh");
-    # Package/Exec stay as the short, space-free identifier ("cardmesh") per
-    # the README's Debian metadata spec (Package/Executable: cardmesh).
+    # this exact path (confirmed against the real CardputerZero/AppBuilder
+    # schema, docs/APP_BUILDER_JSON.md). Display name is app-builder.json's
+    # top-level app_name ("CardMesh"), also the store title; Debian
+    # Package stays the short, space-free identifier ("cardmesh") per the
+    # README's Debian metadata spec (Package: cardmesh), but Exec must be an
+    # absolute path -- confirmed directly against the on-device launcher
+    # (M5CardputerZero-APPLaunch), which rejects any bare/relative Exec as
+    # "unsafe" (applications_load: "unsafe Exec: executable name is not
+    # allowlisted") regardless of .desktop formatting otherwise being valid.
+    # Every other installed app's Exec is an absolute path too. Icon=, in
+    # contrast, must be a BARE filename resolved against the launcher's own
+    # icon pool (see icon_pool_out above) -- an absolute path here fails to
+    # preload (confirmed via the launcher's own journal log).
     desktop_entry = """[Desktop Entry]
 Version=1.0
 Type=Application
 Name=CardMesh
 Comment=Your pocket console for the mesh.
-Exec=cardmesh
-Icon=/usr/share/cardmesh/cardmesh.png
+Exec=/usr/bin/cardmesh
+Icon=cardmesh.png
 Terminal=false
 Categories=Utility;Network;
 """
@@ -104,7 +118,18 @@ Categories=Utility;Network;
 
     icon_src = os.path.join(REPO_ROOT, "assets", "branding", "appIcon.png")
     if os.path.exists(icon_src):
-        shutil.copy2(icon_src, os.path.join(icon_out, "cardmesh.png"))
+        shutil.copy2(icon_src, os.path.join(icon_pool_out, "cardmesh.png"))
+
+    # Real Meshtastic/MeshMonitor app icons for the Home screen's tiles
+    # (see src/ui/HomeScreen.cpp) -- sourced from their own official repos,
+    # resized to assets/branding/logos/ already. MeshCore has no official
+    # square icon published anywhere, so there's no third file here; its
+    # tile falls back to a plain glyph.
+    logos_src = os.path.join(REPO_ROOT, "assets", "branding", "logos")
+    for name in ("meshtastic.png", "meshmonitor.png"):
+        src = os.path.join(logos_src, name)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(logos_out, name))
 
     installed_size_kb = 0
     for dirpath, _dirnames, filenames in os.walk(stage):
@@ -121,15 +146,16 @@ Section: utils
 Priority: optional
 Homepage: https://github.com/maxhayim/CardMesh
 Description: Keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshCore
- CardMesh is a keyboard-first pocket client for MeshMonitor, Meshtastic, and
- MeshCore, built for the M5Stack CardputerZero. This build ships only the
- MVP Dashboard screen, talking to MeshMonitor; direct Meshtastic/MeshCore
- support via the onboard LoRa hat is planned, not yet implemented.
+ CardMesh is a keyboard-first pocket client for three mesh networks at
+ once, built for the M5Stack CardputerZero: MeshMonitor (over REST), and
+ direct Meshtastic/MeshCore over the onboard LoRa hat (one at a time --
+ they share the single physical radio). An icon-grid Home screen switches
+ between all three, each with its own channel picker and chat view, plus
+ an in-app Settings screen.
  .
- NOT verified against real CardputerZero hardware or the official online
- emulator -- see docs/DEVICE_BUILD.md in the source repository for the
- assumptions this build makes (framebuffer/input device paths, color depth)
- and what has and hasn't been tested.
+ Verified running on real CardputerZero hardware -- installed, launched,
+ and exercised on-device; see docs/DEVICE_BUILD.md in the source
+ repository for build assumptions and what has been tested.
 """
     with open(os.path.join(debian_out, "control"), "w") as f:
         f.write(control)

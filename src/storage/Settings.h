@@ -31,6 +31,13 @@ struct AppSettings {
     // Generated once on first use and persisted here; 0 means "not yet
     // generated". See MeshtasticWorker's startup path.
     std::uint32_t loraNodeNum = 0;
+
+    // Which screen the app lands on after the boot splash: false (default)
+    // is the Home icon grid (Meshtastic/MeshCore/MeshMonitor tiles), true
+    // is the Dashboard directly, matching CardMesh's pre-Home-screen
+    // behavior. Toggled via the 'S' key from the Home screen; takes effect
+    // on the next launch, not the current session. See src/ui_main.cpp.
+    bool homeScreenIsDashboard = false;
 };
 
 // Persists connection configuration at ~/.config/cardmesh/config.json (mode 0600).

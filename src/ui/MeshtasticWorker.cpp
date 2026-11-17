@@ -93,6 +93,14 @@ std::vector<KnownChannel> MeshtasticWorker::channelsSnapshot() {
     return channels_;
 }
 
+std::vector<std::string> MeshtasticWorker::channelNames() {
+    std::vector<std::string> names;
+    for (const auto& channel : channelsSnapshot()) {
+        names.push_back(channel.name);
+    }
+    return names;
+}
+
 const KnownChannel* MeshtasticWorker::findChannel(const std::string& name, const std::vector<KnownChannel>& channels) {
     for (const auto& channel : channels) {
         if (channel.name == name) {

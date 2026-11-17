@@ -54,6 +54,8 @@ void MapScreen::build() {
     lv_obj_set_style_text_color(hintLabel_, lv_color_white(), 0);
     lv_obj_set_style_bg_color(hintLabel_, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(hintLabel_, LV_OPA_70, 0);
+    lv_obj_set_style_radius(hintLabel_, 4, 0);
+    lv_obj_set_style_pad_hor(hintLabel_, 4, 0);
     lv_obj_align(hintLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
 }
 

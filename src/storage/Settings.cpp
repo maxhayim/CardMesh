@@ -38,6 +38,8 @@ std::optional<AppSettings> Settings::load(const std::string& path) {
             json.value("tileServerTemplate", AppSettings().tileServerTemplate);
         settings.autoUpdateCheck = json.value("autoUpdateCheck", AppSettings().autoUpdateCheck);
         settings.loraNodeNum = json.value("loraNodeNum", AppSettings().loraNodeNum);
+        settings.homeScreenIsDashboard =
+            json.value("homeScreenIsDashboard", AppSettings().homeScreenIsDashboard);
         return settings;
     } catch (const nlohmann::json::exception&) {
         return std::nullopt;
@@ -62,6 +64,7 @@ bool Settings::save(const AppSettings& settings, const std::string& path) {
     json["tileServerTemplate"] = settings.tileServerTemplate;
     json["autoUpdateCheck"] = settings.autoUpdateCheck;
     json["loraNodeNum"] = settings.loraNodeNum;
+    json["homeScreenIsDashboard"] = settings.homeScreenIsDashboard;
 
     std::ofstream file(path, std::ios::trunc);
     if (!file.is_open()) {

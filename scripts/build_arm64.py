@@ -2,8 +2,7 @@
 """Cross-compiles CardMesh for CardputerZero (aarch64-linux-gnu) using zig cc,
 against a local sysroot extracted from Debian bookworm arm64 packages.
 
-NOT verified against real CardputerZero hardware or the online emulator.
-See docs/DEVICE_BUILD.md.
+Verified running on real CardputerZero hardware; see docs/DEVICE_BUILD.md.
 
 Usage: python3 scripts/build_arm64.py <path-to-sysroot-root>
   <path-to-sysroot-root> is the directory containing usr/include, usr/lib/...
@@ -77,16 +76,24 @@ def main():
         "src/map/TileFetcher.cpp",
         "src/ui/NetworkWorker.cpp",
         "src/ui/MeshtasticWorker.cpp",
+        "src/ui/MeshCoreWorker.cpp",
+        "src/ui/BootScreen.cpp",
+        "src/ui/HomeScreen.cpp",
+        "src/ui/SettingsScreen.cpp",
         "src/ui/DashboardScreen.cpp",
         "src/ui/MapScreen.cpp",
         "src/ui/LoraMessagesScreen.cpp",
         "src/ui/MeshMonitorMessagesScreen.cpp",
+        "src/ui/MeshCoreMessagesScreen.cpp",
         "src/ui/EmojiFont.cpp",
         "src/ui/EvdevKeyboard.cpp",
         "src/update/UpdateChecker.cpp",
         "src/update/UpdateInstaller.cpp",
         "src/update/UpdateWorker.cpp",
         "src/mesh/Aes.cpp",
+        "src/mesh/Sha256.cpp",
+        "src/mesh/MeshCoreCrypto.cpp",
+        "src/mesh/MeshCorePacketCodec.cpp",
         "src/mesh/MeshtasticCrypto.cpp",
         "src/mesh/Protobuf.cpp",
         "src/mesh/ChannelKey.cpp",
