@@ -6,7 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Fixed (0.3.5, pending approval)
+## [0.3.5] - 2026-11-24
+
+### Added (0.3.5)
+
+- Worldwide LoRa region/frequency support for both the direct Meshtastic and
+  MeshCore backends (`src/mesh/LoraRegions.h/.cpp`), selectable from
+  Settings. Frequency tables sourced from the real Meshtastic firmware
+  `RDEF()` region table; deliberately excludes ITU amateur-radio-only bands
+  (require a verified ham license this app can't check), the deprecated
+  `UA_868`, and `EU_N_868` (a frequency-duplicate of `EU_868` under this
+  app's fixed-MediumFast-preset design). MeshCore has no published
+  per-region frequency table of its own, so it reuses whichever region the
+  user selects for the shared setting. Addresses maxhayim/CardMesh#6.
+- v33 visual changes: enlarged Home cards, no Home footer, monochrome
+  logos, live system indicators (`src/hardware/HardwareStatus.*`), and a
+  reusable context-sensitive service footer (`src/ui/Footer.*`).
+
+### Fixed (0.3.5)
 
 - **Navigation crash on selecting a service from Home** (the reported bug):
   `MeshtasticWorker::start()`/`MeshCoreWorker::start()` move-assigned a new
