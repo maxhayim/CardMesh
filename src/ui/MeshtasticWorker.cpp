@@ -4,9 +4,11 @@
 #include <cstdio>
 #include <ctime>
 #include <random>
+#include <sstream>
 #include <utility>
 
 #include "mesh/ChannelKey.h"
+#include "mesh/LoraRegions.h"
 #include "mesh/MeshtasticCrypto.h"
 #include "storage/Settings.h"
 
@@ -23,6 +25,32 @@ std::uint32_t randomU32() {
     static std::mt19937 gen(rd());
     static std::uniform_int_distribution<std::uint32_t> dist;
     return dist(gen);
+}
+
+// Matches ui_main.cpp's logMs() -- both start their own clock at first use,
+// so timestamps are only meaningful for ordering lines from the SAME
+// process, which is all these diagnostics need.
+long long nowMs() {
+    // A raw steady_clock reading (no per-TU "start" epoch subtracted) is a
+    // single, process-wide monotonic timeline shared by ui_main.cpp,
+    // MeshtasticWorker.cpp, and MeshCoreWorker.cpp -- subtracting an
+    // independent "first call in this translation unit" epoch per file (the
+    // earlier version of this helper) silently produced three unrelated
+    // clocks, which made cross-file [nav]/[worker] gaps meaningless.
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
+// Printable, not semantic (there's no portable "is this the main thread"
+// check) -- but consistent within one run, so two log lines sharing this
+// value ran on the same thread, which is what matters for telling "the
+// worker thread is slow" apart from "the calling (likely main) thread
+// blocked inside start()/stop()".
+std::string threadTag() {
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    return oss.str();
 }
 
 // Avoid 0 (reserved/"unset") and the broadcast address for a node's own identity.
@@ -55,22 +83,40 @@ MeshtasticWorker::~MeshtasticWorker() { stop(); }
 
 void MeshtasticWorker::start() {
     if (running_.exchange(true)) {
+        std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::start() ignored, already running\n", nowMs(), threadTag().c_str());
         return;
     }
+    std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::start()\n", nowMs(), threadTag().c_str());
     if (settings_.loraNodeNum == 0) {
         settings_.loraNodeNum = generateNodeNum();
         storage::Settings::save(settings_);
+    }
+    // run() can finish and clear running_ on its own (radio_.begin() failing
+    // fast) without anyone ever calling stop() in between -- if that
+    // happened, thread_ is still joinable from the previous run, and
+    // move-assigning a new std::thread into an already-joinable thread_
+    // calls std::terminate() and aborts the whole process. Confirmed live:
+    // this is exactly what crashed when re-entering a screen whose worker's
+    // last begin() had failed fast.
+    if (thread_.joinable()) {
+        thread_.join();
     }
     thread_ = std::thread(&MeshtasticWorker::run, this);
 }
 
 void MeshtasticWorker::stop() {
-    if (!running_.exchange(false)) {
-        return;
-    }
+    // Don't gate the join on running_: run() clears running_ itself when
+    // radio_.begin() fails (see below), so by the time stop() is next
+    // called running_ may already be false even though thread_ is still
+    // joinable. Destroying a joinable std::thread calls std::terminate()
+    // and aborts the whole process -- always join whatever's left instead
+    // of relying on the exchange() to tell us there's something to join.
+    std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::stop() (joinable=%d)\n", nowMs(), threadTag().c_str(), thread_.joinable());
+    running_ = false;
     if (thread_.joinable()) {
         thread_.join();
     }
+    std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::stop() joined cleanly\n", nowMs(), threadTag().c_str());
 }
 
 void MeshtasticWorker::setChannels(std::vector<KnownChannel> channels) {
@@ -114,7 +160,7 @@ void MeshtasticWorker::run() {
     using namespace std::chrono_literals;
 
     cardmesh::lora::RadioParams params;
-    params.frequencyMhz = cardmesh::mesh::us915MediumFastPrimaryFrequencyMhz();
+    params.frequencyMhz = cardmesh::mesh::loraRegionPrimaryFrequencyMhz(settings_.loraRegion);
     params.bandwidthKhz = 250.0f;   // MEDIUM_FAST preset
     params.spreadingFactor = 9;     // MEDIUM_FAST preset
     params.codingRate = 5;          // MEDIUM_FAST preset (4/5)
@@ -125,6 +171,7 @@ void MeshtasticWorker::run() {
     params.currentLimitMa = 140.0f;
 
     const bool ok = radio_.begin(params);
+    std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::run() radio_.begin() -> %s\n", nowMs(), threadTag().c_str(), ok ? "ok" : radio_.diagnostics().c_str());
     {
         std::lock_guard<std::mutex> lock(messages_.mutex);
         messages_.radioReady = ok;
@@ -132,6 +179,7 @@ void MeshtasticWorker::run() {
     }
     if (!ok) {
         running_ = false;
+        std::fprintf(stderr, "[worker %6lldms t=%s] MeshtasticWorker::run() exiting (begin failed)\n", nowMs(), threadTag().c_str());
         return;
     }
     radio_.startReceive();

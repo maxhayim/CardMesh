@@ -41,8 +41,12 @@ CARDMESH_TEST_MAIN_BEGIN()
     }
 
     {
+        // Field names match the real MeshMonitor server response (see
+        // Message::fromJson's own comment) -- "toNodeId"/"deliveryState",
+        // not the earlier guessed "conversationType"/"state" this fixture
+        // used before fromJson was corrected against the live server.
         const auto message = Message::fromJson(
-            nlohmann::json{{"id", "m1"}, {"conversationType", "DM"}, {"state", "ACK"}, {"text", "hi"}});
+            nlohmann::json{{"id", "m1"}, {"toNodeId", "!8469da0a"}, {"deliveryState", "delivered"}, {"text", "hi"}});
         CARDMESH_CHECK(message.conversationType == ConversationType::DirectMessage);
         CARDMESH_CHECK(message.state == MessageState::Ack);
         CARDMESH_CHECK(message.text == "hi");

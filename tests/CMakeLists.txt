@@ -17,3 +17,7 @@ add_test(NAME database COMMAND test_database)
 add_executable(test_update_checker test_update_checker.cpp)
 target_link_libraries(test_update_checker PRIVATE cardmesh_core)
 add_test(NAME update_checker COMMAND test_update_checker)
+
+add_executable(test_hardware_status test_hardware_status.cpp)
+target_link_libraries(test_hardware_status PRIVATE cardmesh_core)
+add_test(NAME hardware_status COMMAND test_hardware_status)

@@ -48,7 +48,6 @@ def main():
     # icon and the Meshtastic/MeshMonitor logos for the Home screen -- goes
     # into that pool, not a package-name subdirectory under usr/share/.
     icon_pool_out = os.path.join(stage, "usr", "share", "APPLaunch", "share", "images")
-    logos_out = os.path.join(stage, "usr", "share", "cardmesh", "logos")
     # NOTE: dev.cardputer.cc's upload-time checker separately warns
     # "icon declared by .desktop not packed into the package" even with the
     # icon present here -- its install-path policy (fetched live from the
@@ -63,7 +62,6 @@ def main():
     os.makedirs(debian_out, exist_ok=True)
     os.makedirs(desktop_out, exist_ok=True)
     os.makedirs(icon_pool_out, exist_ok=True)
-    os.makedirs(logos_out, exist_ok=True)
 
     # zig objcopy --strip-debug/--strip-all are unimplemented for ELF as of
     # zig 0.16.0, so the shipped binary keeps its debug info (larger, but
@@ -129,16 +127,15 @@ Categories=Utility;Network;
     if os.path.exists(icon_src):
         shutil.copy2(icon_src, os.path.join(icon_pool_out, "cardmesh.png"))
 
-    # Real Meshtastic/MeshMonitor app icons for the Home screen's tiles
-    # (see src/ui/HomeScreen.cpp) -- sourced from their own official repos,
-    # resized to assets/branding/logos/ already. MeshCore has no official
-    # square icon published anywhere, so there's no third file here; its
-    # tile falls back to a plain glyph.
+    # Home screen tile logos -- HomeScreen.cpp's logoDir() defaults to this
+    # exact absolute path in production (CARDMESH_LOGO_DIR overrides it for
+    # host-side testing via tools/screenshot).
     logos_src = os.path.join(REPO_ROOT, "assets", "branding", "logos")
-    for name in ("meshtastic.png", "meshmonitor.png"):
-        src = os.path.join(logos_src, name)
-        if os.path.exists(src):
-            shutil.copy2(src, os.path.join(logos_out, name))
+    logos_out = os.path.join(lib_out, "assets", "branding", "logos")
+    if os.path.isdir(logos_src):
+        os.makedirs(logos_out, exist_ok=True)
+        for name in os.listdir(logos_src):
+            shutil.copy2(os.path.join(logos_src, name), os.path.join(logos_out, name))
 
     installed_size_kb = 0
     for dirpath, _dirnames, filenames in os.walk(stage):
@@ -162,9 +159,10 @@ Description: Keyboard-first pocket client for MeshMonitor, Meshtastic, and MeshC
  between all three, each with its own channel picker and chat view, plus
  an in-app Settings screen.
  .
- Verified running on real CardputerZero hardware -- installed, launched,
- and exercised on-device; see docs/DEVICE_BUILD.md in the source
- repository for build assumptions and what has been tested.
+ Build status: cross-compiles cleanly for arm64 and runs correctly under
+ the desktop LVGL simulator (tools/screenshot). NOT YET verified on
+ physical CardputerZero hardware -- see docs/DEVICE_BUILD.md in the source
+ repository for exactly what has and hasn't been tested before installing.
 """
     with open(os.path.join(debian_out, "control"), "w") as f:
         f.write(control)

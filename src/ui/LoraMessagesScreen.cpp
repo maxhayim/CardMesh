@@ -1,5 +1,6 @@
 #include "LoraMessagesScreen.h"
 
+#include <array>
 #include <cstdio>
 
 #include "Theme.h"
@@ -19,46 +20,71 @@ std::string formatRow(const LoraMessageEntry& entry) {
 
 }  // namespace
 
+namespace {
+
+// Browsing: the screen's real bindings are Back('B'), channel cycle
+// (Z/C -- PanLeft/PanRight, see ui_main.cpp), and StartCompose(Enter).
+// There's no 5th real action on this screen today, so that slot is left
+// blank rather than inventing one -- see Footer.h on why fake items aren't
+// used to fill out the row.
+constexpr std::array<FooterItem, kFooterItemCount> kBrowsingFooterItems = {{
+    {"F1", LV_SYMBOL_HOME, "Home"},
+    {"F2", LV_SYMBOL_LEFT, "Ch -"},
+    {"F3", LV_SYMBOL_RIGHT, "Ch +"},
+    {"F4", LV_SYMBOL_EDIT, "Write"},
+    {},
+}};
+
+// Composing: channel cycling is disabled while typing (Z/C are message
+// text, not shortcuts -- see EvdevKeyboard::pollText), so those slots go
+// blank instead of showing a binding that's temporarily inactive.
+constexpr std::array<FooterItem, kFooterItemCount> kComposingFooterItems = {{
+    {"F1", LV_SYMBOL_CLOSE, "Cancel"},
+    {},
+    {},
+    {"F4", LV_SYMBOL_OK, "Send"},
+    {},
+}};
+
+}  // namespace
+
 LoraMessagesScreen::LoraMessagesScreen(LoraMessagesModel& model) : model_(model) { build(); }
 
 void LoraMessagesScreen::build() {
     screen_ = lv_obj_create(nullptr);
     lv_obj_t* screen = screen_;
     lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
-    lv_obj_set_style_pad_all(screen, 4, 0);
+    lv_obj_set_style_pad_all(screen, 0, 0);
 
     lv_obj_t* title = lv_label_create(screen);
     lv_label_set_text(title, "Direct LoRa");
     lv_obj_set_style_text_color(title, theme::accent(), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 2);
+    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 8, 4);
 
     channelLabel_ = lv_label_create(screen);
     lv_label_set_text(channelLabel_, "Channel: --");
     lv_obj_set_style_text_color(channelLabel_, theme::dim(), 0);
-    lv_obj_align(channelLabel_, LV_ALIGN_TOP_RIGHT, -2, 2);
+    lv_obj_align(channelLabel_, LV_ALIGN_TOP_RIGHT, -8, 4);
 
-    theme::makeDivider(screen, 312, 2, 20);
+    theme::makeDivider(screen, 304, 8, 22);
 
     list_ = lv_list_create(screen);
-    lv_obj_set_size(list_, 312, 112);
-    lv_obj_align(list_, LV_ALIGN_TOP_LEFT, 2, 26);
+    lv_obj_set_size(list_, 304, 84);
+    lv_obj_align(list_, LV_ALIGN_TOP_LEFT, 8, 28);
     theme::applyCardStyle(list_);
 
     statusLabel_ = lv_label_create(screen);
     lv_label_set_text(statusLabel_, "LORA: STARTING");
     lv_obj_set_style_text_color(statusLabel_, theme::warn(), 0);
-    lv_obj_align(statusLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
+    lv_obj_align(statusLabel_, LV_ALIGN_TOP_LEFT, 8, 116);
 
     composeLabel_ = lv_label_create(screen);
     lv_label_set_text(composeLabel_, "");
     lv_obj_set_style_text_color(composeLabel_, lv_color_white(), 0);
-    lv_obj_align(composeLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -16);
+    lv_obj_align(composeLabel_, LV_ALIGN_TOP_LEFT, 8, 116);
     lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
 
-    helpLabel_ = lv_label_create(screen);
-    lv_label_set_text(helpLabel_, "[Enter] compose  [Z/C] channel  [B]ack");
-    lv_obj_set_style_text_color(helpLabel_, theme::dim(), 0);
-    lv_obj_align(helpLabel_, LV_ALIGN_BOTTOM_LEFT, 2, -2);
+    footer_ = std::make_unique<Footer>(screen, kBrowsingFooterItems);
 }
 
 void LoraMessagesScreen::setComposing(bool composing) {
@@ -66,11 +92,11 @@ void LoraMessagesScreen::setComposing(bool composing) {
     if (composing) {
         lv_obj_add_flag(statusLabel_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(helpLabel_, "[Enter] send  [Esc] cancel");
+        footer_->setItems(kComposingFooterItems);
     } else {
         lv_obj_clear_flag(statusLabel_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(composeLabel_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(helpLabel_, "[Enter] compose  [Z/C] channel  [B]ack");
+        footer_->setItems(kBrowsingFooterItems);
     }
 }
 
@@ -110,6 +136,12 @@ void LoraMessagesScreen::refresh() {
     for (const auto& entry : newEntries) {
         const std::string row = formatRow(entry);
         lv_obj_t* rowLabel = lv_list_add_text(list_, row.c_str());
+        // lv_list's text-row class carries LVGL's own default (light)
+        // theme background -- without this override it paints a pale
+        // panel behind each row, leaving little contrast against white/
+        // accent text. Transparent lets the dark card background (set on
+        // list_ via theme::applyCardStyle) show through instead.
+        lv_obj_set_style_bg_opa(rowLabel, LV_OPA_TRANSP, 0);
         lv_obj_set_style_text_color(rowLabel, entry.outgoing ? theme::accent() : lv_color_white(), 0);
     }
     lastRenderedCount_ = count;

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
+#include "Footer.h"
 #include "LoraMessagesModel.h"
 #include "lvgl.h"
 
@@ -44,9 +46,9 @@ private:
     lv_obj_t* screen_ = nullptr;
     lv_obj_t* statusLabel_ = nullptr;
     lv_obj_t* channelLabel_ = nullptr;
-    lv_obj_t* helpLabel_ = nullptr;
     lv_obj_t* list_ = nullptr;
     lv_obj_t* composeLabel_ = nullptr;
+    std::unique_ptr<Footer> footer_;
 
     std::size_t lastRenderedCount_ = 0;
     std::string lastStatusMessage_;

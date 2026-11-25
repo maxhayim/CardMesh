@@ -13,6 +13,8 @@ target_include_directories(nlohmann_json INTERFACE ${CMAKE_SOURCE_DIR}/third_par
 add_library(cardmesh_core STATIC
     src/api/HttpClient.cpp
     src/api/MeshMonitorClient.cpp
+    src/hardware/HardwareStatus.cpp
+    src/mesh/LoraRegions.cpp
     src/storage/Settings.cpp
     src/storage/Database.cpp
     src/update/UpdateChecker.cpp

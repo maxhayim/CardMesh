@@ -24,10 +24,15 @@
 #include "lvgl.h"
 
 #include "map/TileFetcher.h"
+#include "storage/Settings.h"
 #include "ui/DashboardModel.h"
 #include "ui/DashboardScreen.h"
+#include "ui/HomeScreen.h"
+#include "ui/LoraMessagesModel.h"
+#include "ui/LoraMessagesScreen.h"
 #include "ui/MapModel.h"
 #include "ui/MapScreen.h"
+#include "ui/SettingsScreen.h"
 
 namespace {
 
@@ -134,11 +139,83 @@ void renderMap(lv_display_t* disp) {
     tileFetcher.stop();
 }
 
+void renderHome(lv_display_t* disp) {
+    cardmesh::ui::HomeScreen home;
+    home.refresh(/*meshtasticActive=*/true, /*meshCoreActive=*/false, /*meshMonitorActive=*/true);
+    lv_screen_load(home.screenObj());
+    lv_timer_handler();
+    lv_refr_now(disp);
+}
+
+void renderSettings(lv_display_t* disp) {
+    cardmesh::storage::AppSettings settings;
+    settings.server = "meshmonitor.local";
+    settings.port = 443;
+    settings.https = true;
+    settings.apiToken = "sample-token";
+    settings.tileServerTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    settings.loraNodeNum = 0xA1B2C3D4;
+
+    cardmesh::ui::SettingsScreen settingsScreen;
+    settingsScreen.setVersionText("0.3.2");
+    settingsScreen.setUpdateStatusText("Up to date");
+    settingsScreen.setMeshtasticStatusText("Active");
+    settingsScreen.setMeshCoreStatusText("Inactive");
+    settingsScreen.renderValues(settings);
+    lv_screen_load(settingsScreen.screenObj());
+    lv_timer_handler();
+    lv_refr_now(disp);
+}
+
+void renderMessages(lv_display_t* disp) {
+    cardmesh::ui::LoraMessagesModel model;
+    {
+        std::lock_guard<std::mutex> lock(model.mutex);
+        model.radioReady = true;
+        model.statusMessage = "LORA: READY";
+        model.messages = {
+            {"MediumFast", 0xa1b2c3d4, 0, "Anyone near Doral?", 0, false, -92.0f, 7.5f},
+            {"MediumFast", 0, 0, "Yeah, just passed Brickell", 0, true, 0, 0},
+        };
+    }
+
+    cardmesh::ui::LoraMessagesScreen messages(model);
+    messages.setChannelName("MediumFast");
+    messages.refresh();
+    lv_screen_load(messages.screenObj());
+    lv_timer_handler();
+    lv_refr_now(disp);
+}
+
+void renderMessagesComposing(lv_display_t* disp) {
+    cardmesh::ui::LoraMessagesModel model;
+    {
+        std::lock_guard<std::mutex> lock(model.mutex);
+        model.radioReady = true;
+        model.statusMessage = "LORA: READY";
+        model.messages = {
+            {"MediumFast", 0xa1b2c3d4, 0, "Anyone near Doral?", 0, false, -92.0f, 7.5f},
+            {"MediumFast", 0, 0, "Yeah, just passed Brickell", 0, true, 0, 0},
+        };
+    }
+
+    cardmesh::ui::LoraMessagesScreen messages(model);
+    messages.setChannelName("MediumFast");
+    messages.refresh();
+    messages.setComposing(true);
+    messages.setComposeText("On my way, 10 min out");
+    lv_screen_load(messages.screenObj());
+    lv_timer_handler();
+    lv_refr_now(disp);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     if (argc != 3) {
-        std::fprintf(stderr, "Usage: %s <connected|unreachable|map> <out.raw>\n", argv[0]);
+        std::fprintf(stderr,
+                      "Usage: %s <connected|unreachable|map|home|settings|messages|messages-composing> <out.raw>\n",
+                      argv[0]);
         return EXIT_FAILURE;
     }
     const std::string scenario = argv[1];
@@ -154,6 +231,14 @@ int main(int argc, char** argv) {
 
     if (scenario == "map") {
         renderMap(disp);
+    } else if (scenario == "home") {
+        renderHome(disp);
+    } else if (scenario == "settings") {
+        renderSettings(disp);
+    } else if (scenario == "messages") {
+        renderMessages(disp);
+    } else if (scenario == "messages-composing") {
+        renderMessagesComposing(disp);
     } else {
         renderDashboard(scenario, disp);
     }

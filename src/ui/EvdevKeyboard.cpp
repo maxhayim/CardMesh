@@ -116,11 +116,7 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_KPENTER:
                 result = GlobalKey::StartCompose;
                 break;
-            case KEY_ESC:
             case KEY_B:
-                // KEY_B as a fallback: CardputerZero's chiclet keyboard may
-                // not have a reliable dedicated Esc key -- unconfirmed on
-                // real hardware, see docs/DEVICE_BUILD.md.
                 result = GlobalKey::Back;
                 break;
             // CardputerZero's chiclet keyboard has no dedicated arrow keys at
@@ -146,9 +142,23 @@ GlobalKey EvdevKeyboard::poll() {
             case KEY_C:
                 result = GlobalKey::PanRight;
                 break;
-            // fn+K on this hardware sends the standard Home keycode (same
-            // doc as above) -- jumps to the icon-grid Home screen from
-            // anywhere, independent of which screen is "home" at boot.
+            // The CardputerZero's single combined "ESC/HOME" key (top-left,
+            // mic icon) was confirmed via a live /dev/input/event3 capture
+            // on real hardware to emit a plain KEY_ESC on both a short tap
+            // and a multi-second hold -- never KEY_HOME, and with no evdev-
+            // level distinction between the two, so CardMesh can't itself
+            // tell short from long. The platform's own convention (seen in
+            // the CardputerZero app store) is a toast reading "Hold ESC for
+            // 3s to exit." on a short tap; the actual exit-to-system-Home
+            // on a long hold is handled by the compositor/launcher, outside
+            // any app's control. See ui_main.cpp's ShowHomeHint handling.
+            case KEY_ESC:
+                result = GlobalKey::ShowHomeHint;
+                break;
+            // Real KEY_HOME is never observed on this hardware, but is kept
+            // as a defensive fallback (an external keyboard, a future
+            // firmware revision) that jumps straight to CardMesh's own
+            // icon-grid Home screen, same as before.
             case KEY_HOME:
                 result = GlobalKey::GoHome;
                 break;

@@ -27,13 +27,4 @@ bool channelCrypt(const std::uint8_t* key, std::size_t keyLength, std::uint32_t 
 // to: xorHash(channel name bytes) ^ xorHash(resolved key bytes).
 std::uint8_t channelHash(const char* name, const std::uint8_t* key, std::size_t keyLength);
 
-// US915 MediumFast (the actual preset this network uses, per the user --
-// NOT the more commonly-cited LongFast default) center frequency, in MHz,
-// for the Primary channel's default frequency slot:
-// 902.125 + (djb2("MediumFast") % 104) * 0.25. Bandwidth (250kHz) and so
-// numFreqSlots are the same as LongFast; only the hashed name (and thus
-// the resulting slot) and the spreading factor (9, not 11) differ. This
-// matches RadioInterface::applyModemConfig()'s default (non-override) case.
-float us915MediumFastPrimaryFrequencyMhz();
-
 }  // namespace cardmesh::mesh

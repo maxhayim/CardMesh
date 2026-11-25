@@ -19,6 +19,15 @@ against real (not fabricated) shared libraries, packaged into a real `.deb`.
 It has not been run on a CardputerZero or in its emulator. Treat it as a
 release candidate to test, not a verified release.
 
+## Build status at a glance
+
+| Stage | Status |
+|---|---|
+| ARM64 cross-compilation | **Verified** — produces a valid `ELF 64-bit LSB executable, ARM aarch64` binary (confirmed via `file`/ELF header inspection); see "What was verified, and how" below. |
+| Desktop LVGL simulation | **Verified** — `tools/screenshot` renders the real UI correctly on-host at native 320×170. |
+| `.deb` package creation | **Verified** — `scripts/package_deb.py` produces a structurally valid package; the real upload to `dev.cardputer.cc` (below) independently confirmed the binary/library bundle is correct. |
+| Physical CardputerZero hardware | **Not yet completed.** Never installed, launched, or exercised on a real device. Every device-specific assumption below (framebuffer path, input device, color depth, GPIO/sysfs layout, battery/wifi/bluetooth sysfs presence) is a best-effort guess from public documentation and the Cap-LoRa-1262 reference app, not a confirmed fact. |
+
 ## What's actually implemented
 
 The MVP **Dashboard** screen (see the README's "Dashboard" mock) and a

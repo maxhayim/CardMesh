@@ -29,7 +29,15 @@ enum class GlobalKey {
     CheckForUpdate,   // 'U' from the Dashboard: check now, or install if one was already found
     ToggleAutoUpdate,  // 'A' from the Dashboard: toggle automatic startup update checks
     OpenSettings,  // 'S' from the Home screen or Dashboard: open the Settings screen
-    GoHome,  // Standard Home keycode (this hardware's fn+K): jump to the icon-grid Home screen from anywhere
+    GoHome,  // A real KEY_HOME event, should one ever arrive: jump to the icon-grid Home screen from anywhere
+    // The physical ESC/HOME key (confirmed via a live /dev/input/event3
+    // capture to send plain KEY_ESC, never KEY_HOME, on both a short tap
+    // and a multi-second hold -- see EvdevKeyboard.cpp) matches the
+    // platform's own convention, also used by the CardputerZero app store:
+    // a short tap shows a reminder toast rather than acting immediately,
+    // since the real "exit to system Home" gesture is a multi-second hold
+    // handled by the compositor/launcher itself, outside any app's control.
+    ShowHomeHint,
 };
 
 // Result of a pollText() call: the printable characters typed since the

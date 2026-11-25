@@ -1,9 +1,9 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "lvgl.h"
@@ -38,25 +38,39 @@ public:
 private:
     void build();
     void updateSelectionHighlight();
+    void updateStatusRow();
 
     struct Tile {
         lv_obj_t* card = nullptr;
+        // Settings (index 3) has no "owns the radio/connection" concept, so
+        // it never gets a badge object at all -- stays null, see build().
         lv_obj_t* badge = nullptr;
-        // Only set for tiles with a real logo image (Meshtastic/MeshMonitor);
-        // kept alive here since lv_image_dsc_t only stores a raw pointer
-        // into it. MeshCore has no official square icon anywhere public
-        // (only a wordmark) -- see HomeScreen.cpp -- so it stays a plain
-        // glyph instead.
+        // Only set for tiles with a real logo asset (not Settings, which
+        // has no official logo and uses a drawn gear glyph instead). Owns
+        // the decoded PNG bytes that lv_image_dsc_t::data points into --
+        // must outlive the lv_image object, see build().
         std::unique_ptr<std::vector<std::uint8_t>> logoBytes;
         std::unique_ptr<lv_image_dsc_t> logoDsc;
     };
 
     lv_obj_t* screen_ = nullptr;
-    lv_obj_t* hintLabel_ = nullptr;
     std::array<Tile, kHomeTileCount> tiles_;
     int selectedIndex_ = 0;
     bool lastActive_[kHomeTileCount] = {false, false, false, false};
     bool everRefreshed_ = false;
+
+    // Top-right status row: real data read from sysfs (battery %, wlan0
+    // link state, hci0 rfkill state), not decorative placeholders -- see
+    // updateStatusRow() in HomeScreen.cpp. Re-read at most once a second
+    // (sysfsPollIntervalMs_ worth of wall-clock time), not every refresh()
+    // tick, since refresh() is called roughly every 50ms by ui_main.cpp's
+    // main loop and these values change far slower than that.
+    lv_obj_t* wifiIcon_ = nullptr;
+    lv_obj_t* btIcon_ = nullptr;
+    lv_obj_t* batteryIcon_ = nullptr;
+    lv_obj_t* statusDivider_ = nullptr;
+    lv_obj_t* clockLabel_ = nullptr;
+    std::chrono::steady_clock::time_point lastStatusPollAt_{};
 };
 
 }  // namespace cardmesh::ui

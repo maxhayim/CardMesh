@@ -348,7 +348,13 @@ int16_t Module::SPItransferStream(const uint8_t* cmd, uint8_t cmdLen, bool write
 
   // copy the data
   if(write) {
-    memcpy(buffOutPtr, dataOut, numBytes);
+    // SX126x::standby()'s wakeup NOP (and other zero-payload commands) call
+    // this with dataOut=NULL, numBytes=0 by design -- harmless on glibc, but
+    // our cross-compiled libc's memcpy treats a null source as a hard fault
+    // even at length 0, aborting the whole process. Guard it.
+    if(numBytes > 0) {
+      memcpy(buffOutPtr, dataOut, numBytes);
+    }
   } else {
     memset(buffOutPtr, this->spiConfig.cmds[RADIOLIB_MODULE_SPI_COMMAND_NOP], numBytes + (this->spiConfig.widths[RADIOLIB_MODULE_SPI_WIDTH_STATUS] / 8));
   }

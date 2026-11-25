@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 
+#include "mesh/LoraRegions.h"
+
 namespace cardmesh::storage {
 
 struct AppSettings {
@@ -31,6 +33,13 @@ struct AppSettings {
     // Generated once on first use and persisted here; 0 means "not yet
     // generated". See MeshtasticWorker's startup path.
     std::uint32_t loraNodeNum = 0;
+
+    // Which worldwide LoRa region the direct Meshtastic/MeshCore backends
+    // transmit on (see src/mesh/LoraRegions.h) -- both share this one
+    // setting since they time-share the single physical radio. Defaults to
+    // US915, matching CardMesh's original hardcoded behavior before this
+    // setting existed.
+    cardmesh::mesh::LoraRegion loraRegion = cardmesh::mesh::LoraRegion::US;
 
     // Which screen the app lands on after the boot splash: false (default)
     // is the Home icon grid (Meshtastic/MeshCore/MeshMonitor tiles), true

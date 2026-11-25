@@ -10,6 +10,7 @@
 #include "MeshCoreMessagesModel.h"
 #include "lora/LoraRadio.h"
 #include "mesh/MeshCoreCrypto.h"
+#include "storage/Settings.h"
 
 namespace cardmesh::ui {
 
@@ -24,7 +25,7 @@ namespace cardmesh::ui {
 // manual toggle, stopping whichever is running before starting the other.
 class MeshCoreWorker {
 public:
-    explicit MeshCoreWorker(MeshCoreMessagesModel& messages);
+    MeshCoreWorker(storage::AppSettings& settings, MeshCoreMessagesModel& messages);
     ~MeshCoreWorker();
 
     MeshCoreWorker(const MeshCoreWorker&) = delete;
@@ -72,6 +73,7 @@ private:
     std::mutex outgoingMutex_;
     std::deque<OutgoingMessage> outgoingQueue_;
 
+    storage::AppSettings& settings_;
     MeshCoreMessagesModel& messages_;
 };
 

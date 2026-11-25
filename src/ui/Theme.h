@@ -15,10 +15,10 @@ namespace cardmesh::ui::theme {
 // per-sender rainbow palette (that's another store app's specific trick,
 // not something either official app does); senders are distinguished by
 // plain dim-gray id + white message text, same as both official apps.
-inline lv_color_t accent() { return lv_color_make(0x67, 0xea, 0x94); }
+inline lv_color_t accent() { return lv_color_make(0x8f, 0xe6, 0xa5); }
 inline lv_color_t accentDim() { return lv_color_make(0x2f, 0x5c, 0x47); }
 inline lv_color_t card() { return lv_color_make(0x1c, 0x22, 0x1f); }
-inline lv_color_t dim() { return lv_color_make(0x8a, 0x95, 0x8e); }
+inline lv_color_t dim() { return lv_color_make(0xae, 0xb8, 0xb0); }
 inline lv_color_t warn() { return lv_color_make(0xff, 0xcc, 0x00); }
 inline lv_color_t danger() { return lv_color_make(0xe5, 0x5d, 0x5d); }
 

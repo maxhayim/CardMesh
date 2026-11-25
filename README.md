@@ -39,7 +39,9 @@ It provides a compact physical interface for accessing MeshMonitor channels, dir
 
 **What's changed:** CardMesh has expanded beyond MeshMonitor to also talk directly to the CardputerZero's onboard LoRa hat, adding native Meshtastic and MeshCore support alongside the existing MeshMonitor client — the first CardputerZero app for Meshtastic and MeshCore. See [Roadmap](#roadmap) for what's shipped.
 
-This repository is public. `v0.3.1` has been installed, launched, and exercised on a real CardputerZero — see [`docs/DEVICE_BUILD.md`](docs/DEVICE_BUILD.md) for exactly what's been tested.
+**Supported LoRa hat:** the **M5Stack Cap-LoRa-1262** (SX1262 chip) only. CardMesh talks to it over raw SPI/GPIO/I2C with pin numbers and an init sequence taken from the Cap-LoRa-1262's own reference app — no other LoRa hat or cap (SX1268, LR1121, or otherwise) is supported, detected, or auto-negotiated. The MeshMonitor-relay backend needs no hat at all.
+
+This repository is public. `v0.3.1` cross-compiles cleanly for arm64 and runs correctly under the desktop LVGL simulator; it has **not yet** been installed or run on physical CardputerZero hardware — see [`docs/DEVICE_BUILD.md`](docs/DEVICE_BUILD.md) for exactly what's been tested and what hasn't.
 
 Licensing is [MIT](LICENSE). See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to contribute and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) / [`SECURITY.md`](SECURITY.md) for the rest of the project's community policies.
 
@@ -53,6 +55,7 @@ Licensing is [MIT](LICENSE). See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to
 **Executable:** `cardmesh`  
 **Target Platform:** M5Stack CardputerZero  
 **Backends:** MeshMonitor REST API v1 (shipped); direct Meshtastic and MeshCore via the CardputerZero's onboard LoRa hat (shipped, one at a time -- they share the single physical radio)  
+**Supported LoRa hat:** M5Stack Cap-LoRa-1262 (SX1262) only -- no other hat is supported  
 
 ### Tagline
 
@@ -112,7 +115,7 @@ Meshtastic / MeshCore / MQTT
     CardputerZero
 ```
 
-A second, direct path uses the CardputerZero's onboard LoRa hat, so CardMesh can talk to Meshtastic and MeshCore nodes locally without requiring a MeshMonitor server at all:
+A second, direct path uses the CardputerZero's onboard LoRa hat, so CardMesh can talk to Meshtastic and MeshCore nodes locally without requiring a MeshMonitor server at all. This path requires the **M5Stack Cap-LoRa-1262** hat specifically (SX1262 chip) -- it is the only LoRa hat CardMesh supports; a different hat will not work with the direct path (see `src/lora/SX1262Hal.h`):
 
 ```text
                  MeshMonitor REST API v1 / HTTPS  (shipped)

@@ -20,16 +20,6 @@ std::uint8_t xorHash(const std::uint8_t* p, std::size_t len) {
     return code;
 }
 
-// meshtastic/firmware src/mesh/RadioInterface.cpp: uint32_t hash(const char*). djb2.
-std::uint32_t djb2(const char* str) {
-    std::uint32_t hash = 5381;
-    int c;
-    while ((c = *str++) != 0) {
-        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
-    }
-    return hash;
-}
-
 }  // namespace
 
 std::vector<std::uint8_t> expandDefaultPsk(std::uint8_t index) {
@@ -69,18 +59,6 @@ std::uint8_t channelHash(const char* name, const std::uint8_t* key, std::size_t 
     std::uint8_t h = xorHash(reinterpret_cast<const std::uint8_t*>(name), std::strlen(name));
     h ^= xorHash(key, keyLength);
     return h;
-}
-
-float us915MediumFastPrimaryFrequencyMhz() {
-    // RDEF(US, 902.0f, 928.0f, ...) with PROFILE_STD (spacing=0, padding=0)
-    // and MEDIUM_FAST's bw=250kHz (same as LongFast): freqSlotWidth = 0.25
-    // MHz, numFreqSlots = round((928-902+0)/0.25) = 104. Only the hashed
-    // name differs from LongFast, landing on a different slot.
-    constexpr float kFreqStart = 902.0f;
-    constexpr float kBwMhz = 0.25f;
-    constexpr std::uint32_t kNumFreqSlots = 104;
-    const std::uint32_t slot = djb2("MediumFast") % kNumFreqSlots;
-    return kFreqStart + (kBwMhz / 2.0f) + static_cast<float>(slot) * kBwMhz;
 }
 
 }  // namespace cardmesh::mesh

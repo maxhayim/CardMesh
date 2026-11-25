@@ -1,6 +1,10 @@
 #include "LoraRadio.h"
 
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <thread>
 
 #include "RadioLib.h"
 
@@ -51,7 +55,9 @@ bool LoraRadio::initHardware() {
     }
     if (!spiOpened) {
         diagnostics_ = "failed to open any SPI candidate device";
-        pi4ioGate_->restore();
+        if (pi4ioGate_) {
+            pi4ioGate_->restore();
+        }
         hatPower_.restore();
         return false;
     }
@@ -63,6 +69,32 @@ bool LoraRadio::begin(const RadioParams& params) {
     if (ready_) {
         return true;
     }
+#ifdef CARDMESH_ENABLE_TEST_HOOKS
+    // Test-only hook, compiled in ONLY when scripts/build_arm64.py is
+    // invoked with --enable-test-hooks (never for the real release build --
+    // see docs/DEVICE_BUILD.md). Lets the navigation/worker-lifecycle tests
+    // exercise MeshtasticWorker/MeshCoreWorker's full begin()-succeeds,
+    // begin()-fails-fast, and begin()-is-slow paths without touching the
+    // physical SX1262/hat at all, so they can run alongside a live
+    // production instance without contending for the same SPI/I2C/GPIO
+    // hardware. Gated at compile time, not just by checking the env var at
+    // runtime, so a stray CARDMESH_FAKE_RADIO in a real deployment's
+    // environment can never silently disable real hardware access --
+    // there's no code path for it to take in a production binary.
+    if (const char* fake = std::getenv("CARDMESH_FAKE_RADIO")) {
+        const std::string mode = fake;
+        if (mode.rfind("slow:", 0) == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::atoi(mode.c_str() + 5)));
+        }
+        if (mode == "fail" || mode.rfind("fail:", 0) == 0) {
+            diagnostics_ = "CARDMESH_FAKE_RADIO=" + mode + " (test mode, no real hardware touched)";
+            return false;
+        }
+        diagnostics_ = "CARDMESH_FAKE_RADIO=" + mode + " ok (test mode, no real hardware touched)";
+        ready_ = true;
+        return true;
+    }
+#endif  // CARDMESH_ENABLE_TEST_HOOKS
     if (!initHardware()) {
         return false;
     }

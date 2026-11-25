@@ -6,6 +6,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed (0.3.5, pending approval)
+
+- **Navigation crash on selecting a service from Home** (the reported bug):
+  `MeshtasticWorker::start()`/`MeshCoreWorker::start()` move-assigned a new
+  `std::thread` into `thread_` without checking whether the previous one was
+  still joinable. If a worker's own `run()` had already exited on its own
+  (radio `begin()` failing fast) without `stop()` ever being called to join
+  it, the next `start()` call -- e.g. selecting that service's tile from
+  Home -- overwrote a still-joinable `thread_` and called `std::terminate()`,
+  aborting the whole process. Reproduced live and fixed by joining any
+  joinable `thread_` before replacing it, in both workers.
+- `MeshtasticWorker::stop()`/`MeshCoreWorker::stop()` could skip joining a
+  finished-but-unjoined worker thread (gated the join on an atomic exchange
+  that the worker itself could flip), leaving a joinable `std::thread` to be
+  destroyed later and aborting the process the same way. Always join now if
+  there's anything to join.
+- RadioLib's `Module::SPItransferStream` called `memcpy` with a null source
+  pointer and zero length for certain zero-payload commands (e.g. the
+  SX126x standby wakeup NOP) -- defined behavior on glibc, but a hard fault
+  under this build's libc. Guarded with a length check.
+- Stale `model_parsing` test fixture used JSON field names
+  (`conversationType`/`state`) that `Message::fromJson` had already been
+  migrated away from (to `toNodeId`/`deliveryState`) to match the real
+  MeshMonitor server response; unrelated to navigation, fixed separately.
+
+### Changed
+
+- Added timestamped `[nav]`/`[worker]` diagnostics (screen transitions,
+  worker start/stop/join, `radio_.begin()` results) to aid future crash
+  triage; always on, lightweight since they only fire on real transitions.
+- Added an opt-in main-loop heartbeat (`CARDMESH_DEBUG_HEARTBEAT=1`) for
+  diagnosing a hung UI thread; off by default to avoid continuous logging
+  in normal operation.
+- `scripts/build_arm64.py` gained `--enable-test-hooks`, which compiles in
+  an `CARDMESH_FAKE_RADIO` test-only hook in `LoraRadio::begin()` (mock
+  success/failure/slow-init, used to regression-test navigation and worker
+  lifecycle without touching the physical SX1262). Gated behind a
+  compile-time macro, never passed for a release build -- without it, the
+  hook's code does not exist in the binary at all, so no production
+  environment variable can disable real hardware access.
+
 ### Added
 
 - Project scaffold: directory layout, CMake build, `.gitignore`.

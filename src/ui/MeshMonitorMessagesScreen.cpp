@@ -78,7 +78,11 @@ void MeshMonitorMessagesScreen::refresh() {
 
     for (const auto& entry : newEntries) {
         const std::string row = formatRow(entry);
-        lv_list_add_text(list_, row.c_str());
+        lv_obj_t* rowLabel = lv_list_add_text(list_, row.c_str());
+        // See LoraMessagesScreen::refresh() -- same default-theme light
+        // row background, same fix.
+        lv_obj_set_style_bg_opa(rowLabel, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_text_color(rowLabel, lv_color_white(), 0);
     }
     lastRenderedCount_ = count;
 

@@ -2,11 +2,20 @@
 """Cross-compiles CardMesh for CardputerZero (aarch64-linux-gnu) using zig cc,
 against a local sysroot extracted from Debian bookworm arm64 packages.
 
-Verified running on real CardputerZero hardware; see docs/DEVICE_BUILD.md.
+Produces a valid arm64 ELF binary and runs correctly under the desktop LVGL
+simulator (tools/screenshot); NOT YET run on physical CardputerZero
+hardware. See docs/DEVICE_BUILD.md for exactly what has and hasn't been
+verified.
 
-Usage: python3 scripts/build_arm64.py <path-to-sysroot-root>
+Usage: python3 scripts/build_arm64.py <path-to-sysroot-root> [--enable-test-hooks]
   <path-to-sysroot-root> is the directory containing usr/include, usr/lib/...
   extracted from the .deb packages (see docs/DEVICE_BUILD.md for the list).
+  --enable-test-hooks compiles in LoraRadio's CARDMESH_FAKE_RADIO test hook
+  (see its own comment in src/lora/LoraRadio.cpp) for navigation/worker
+  regression testing without touching the physical SX1262. NEVER pass this
+  for a real release build -- without it, the hook's code doesn't exist in
+  the binary at all, so there is no env var that can disable real hardware
+  access in a production CardMesh.
 """
 import glob
 import os
@@ -25,7 +34,7 @@ def zig_cc(is_cpp):
     return ["zig", "c++" if is_cpp else "cc"]
 
 
-def compile_unit(src, sysroot, is_cpp):
+def compile_unit(src, sysroot, is_cpp, enable_test_hooks=False):
     rel = os.path.relpath(src, REPO_ROOT)
     obj = os.path.join(OBJ_DIR, rel + ".o")
     os.makedirs(os.path.dirname(obj), exist_ok=True)
@@ -49,6 +58,8 @@ def compile_unit(src, sysroot, is_cpp):
         "-isystem", os.path.join(sysroot, "usr", "include"),
         "-isystem", os.path.join(sysroot, "usr", "include", "aarch64-linux-gnu"),
     ]
+    if enable_test_hooks:
+        cmd += ["-DCARDMESH_ENABLE_TEST_HOOKS=1"]
     if is_cpp:
         cmd += ["-std=gnu++17"]
     else:
@@ -60,10 +71,16 @@ def compile_unit(src, sysroot, is_cpp):
 
 
 def main():
-    if len(sys.argv) != 2:
+    args = sys.argv[1:]
+    enable_test_hooks = "--enable-test-hooks" in args
+    positional = [a for a in args if a != "--enable-test-hooks"]
+    if len(positional) != 1:
         print(__doc__)
         sys.exit(1)
-    sysroot = os.path.abspath(sys.argv[1])
+    sysroot = os.path.abspath(positional[0])
+    if enable_test_hooks:
+        print("WARNING: --enable-test-hooks set -- this binary is for regression")
+        print("testing only and must never be packaged or installed as a release.")
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -79,6 +96,7 @@ def main():
         "src/ui/MeshCoreWorker.cpp",
         "src/ui/BootScreen.cpp",
         "src/ui/HomeScreen.cpp",
+        "src/ui/Footer.cpp",
         "src/ui/SettingsScreen.cpp",
         "src/ui/DashboardScreen.cpp",
         "src/ui/MapScreen.cpp",
@@ -87,10 +105,12 @@ def main():
         "src/ui/MeshCoreMessagesScreen.cpp",
         "src/ui/EmojiFont.cpp",
         "src/ui/EvdevKeyboard.cpp",
+        "src/hardware/HardwareStatus.cpp",
         "src/update/UpdateChecker.cpp",
         "src/update/UpdateInstaller.cpp",
         "src/update/UpdateWorker.cpp",
         "src/mesh/Aes.cpp",
+        "src/mesh/LoraRegions.cpp",
         "src/mesh/Sha256.cpp",
         "src/mesh/MeshCoreCrypto.cpp",
         "src/mesh/MeshCorePacketCodec.cpp",
@@ -125,7 +145,7 @@ def main():
 
     objects = []
     for src in cpp_sources:
-        objects.append(compile_unit(src, sysroot, is_cpp=True))
+        objects.append(compile_unit(src, sysroot, is_cpp=True, enable_test_hooks=enable_test_hooks))
     for src in radiolib_sources:
         objects.append(compile_unit(src, sysroot, is_cpp=True))
     for src in lvgl_sources:
